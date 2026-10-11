@@ -1,0 +1,1530 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="うちのレシピ">
+<meta name="theme-color" content="#FAF7F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1B1816" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<title>うちのレシピ</title>
+<style>
+:root{
+  --bg:#FAF7F2;--card:#FFFFFF;--ink:#2B2622;--sub:#6E655C;--muted:#9C9389;--line:#E8E1D8;
+  --accent:#C8553D;--accent-ink:#FFFFFF;--accent-soft:#F7E6DF;--accent-text:#9E3B26;
+  --warn:#8A5A00;--warn-soft:#FBEFD6;--danger:#B3261E;--ok:#2F6B3A;
+  --r:14px;--tabh:60px;color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#1B1816;--card:#262220;--ink:#F3EDE6;--sub:#BDB3A8;--muted:#8C8379;--line:#3A3431;
+  --accent:#E07A5F;--accent-ink:#1B1816;--accent-soft:#3D2620;--accent-text:#F0A48F;
+  --warn:#E8B04B;--warn-soft:#3A2E14;--danger:#F2867F;--ok:#8FD19C;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",sans-serif;-webkit-text-size-adjust:100%;line-height:1.6}
+body{padding-bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 24px)}
+body.cooking{padding-bottom:0}
+#app{max-width:680px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 8px) 16px 24px}
+a{color:var(--accent-text)}
+h1{font-size:22px;margin:0;font-weight:700;line-height:1.35}
+h2{font-size:17px;margin:0 0 10px;font-weight:700}
+input,textarea,select,button{font:inherit;font-size:16px;color:inherit}
+input,textarea,select{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;outline:none;min-width:0}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;line-height:1.6}
+button{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 14px;cursor:pointer;white-space:nowrap;flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+button:active{transform:scale(.98)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+button.big{width:100%;padding:13px 16px;font-size:17px}
+button.ghost{background:transparent;border-color:transparent}
+button.danger{color:var(--danger)}
+button.small{font-size:14px;padding:6px 10px}
+.icon-btn{width:40px;height:40px;padding:0;border-radius:50%;background:transparent;border:none;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:48px;margin-bottom:8px}
+.top .t-sm{font-size:17px;flex:1;text-align:center}
+.muted{color:var(--muted);font-size:13px}
+.sub{color:var(--sub)}
+.err{color:var(--danger);font-size:13px;margin:4px 0 0;min-height:0}
+.err:empty{display:none}
+.lbl{display:block;font-size:13px;color:var(--sub);margin:14px 0 4px}
+section{margin:22px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin:12px 0}
+.card h2{margin-bottom:6px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips.wrap{flex-wrap:wrap;overflow:visible}
+.chip{flex:none;font-size:14px;padding:5px 12px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--sub)}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-text)}
+.tag{display:inline-block;font-size:12px;padding:2px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent-text);margin:0 4px 4px 0}
+.row{display:flex;gap:8px;align-items:center}
+.row-between{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px;margin-top:8px}
+@media (min-width:560px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.rcard{text-decoration:none;color:inherit;display:block}
+.thumb{aspect-ratio:4/3;border-radius:12px;background:var(--accent-soft);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--accent-text)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.rcard .ct{font-weight:700;font-size:15px;margin-top:6px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rcard .cm{font-size:12px;color:var(--muted)}
+.hero{margin:0 -16px 14px;aspect-ratio:4/3;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent-text);overflow:hidden;position:relative}
+.hero img{width:100%;height:100%;object-fit:cover}
+.hero.noimg{aspect-ratio:auto;height:96px}
+@media (min-width:680px){.hero{margin:0 0 14px;border-radius:var(--r)}}
+.hero .more{position:absolute;right:10px;bottom:10px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:2px 8px;border-radius:999px}
+.meta{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--sub);margin:6px 0 10px}
+.meta span,.meta a{display:inline-flex;align-items:center;gap:4px}
+.meta svg{width:16px;height:16px}
+.stepper{display:flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px}
+.stepper button{width:34px;height:34px;border-radius:50%;padding:0;border:none;background:var(--accent-soft);color:var(--accent-text);font-size:20px;font-weight:700}
+.stepper span{min-width:64px;text-align:center;font-weight:700}
+.ings{list-style:none;margin:0;padding:0}
+.ings li{display:flex;justify-content:space-between;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line)}
+.ings li.head{border-bottom:none;padding:14px 2px 2px;font-weight:700;color:var(--accent-text);font-size:14px}
+.ings .q{text-align:right;white-space:nowrap;font-weight:600}
+.ings .q.changed{color:var(--accent-text)}
+.grp{display:inline-block;min-width:20px;font-size:11px;text-align:center;border-radius:4px;background:var(--accent-soft);color:var(--accent-text);margin-right:6px;padding:0 4px;vertical-align:1px}
+.approx{font-size:11px;color:var(--warn);background:var(--warn-soft);border-radius:4px;padding:0 5px;margin-left:4px;font-weight:400}
+.steps{list-style:none;margin:0;padding:0}
+.steps li{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.steps .stext{flex:1;white-space:pre-wrap;word-break:break-word}
+.steps img{width:100%;max-width:320px;border-radius:10px;margin-top:8px;display:block}
+.tchip{display:inline-flex;align-items:center;gap:3px;padding:0 8px;margin:0 2px;border-radius:999px;font-size:inherit;background:var(--accent-soft);color:var(--accent-text);border:none;vertical-align:baseline;line-height:1.6}
+.tchip svg{width:14px;height:14px}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumbs .t{position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;background:var(--accent-soft)}
+.thumbs .t img{width:100%;height:100%;object-fit:cover}
+.thumbs .t button{position:absolute;top:3px;right:3px;width:24px;height:24px;padding:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none}
+.thumbs .t button svg{width:14px;height:14px}
+.thumbs .t .cover-btn{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);color:#fff;font-size:11px;text-align:center;padding:2px 0;cursor:pointer}
+.thumbs .t .cover-btn.on{background:var(--accent);color:var(--accent-ink);cursor:default}
+.thumb-add{width:84px;height:84px;border:1.5px dashed var(--muted);background:transparent;color:var(--sub);flex-direction:column;font-size:12px;gap:2px}
+.refs{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.refs img{width:100%;border-radius:10px;display:block;cursor:zoom-in;background:var(--accent-soft)}
+.ingrow{display:grid;grid-template-columns:minmax(0,1fr) 70px 78px 36px;gap:6px;margin-bottom:6px;align-items:center}
+.ingrow.head{grid-template-columns:minmax(0,1fr) 36px}
+.ingrow.head input{font-weight:700;background:var(--accent-soft);border-color:transparent}
+.ingrow input{padding:8px 9px}
+.xbtn{width:36px;height:36px;padding:0;border:none;background:transparent;color:var(--muted)}
+.steprow{display:flex;gap:10px;margin-bottom:12px}
+.steprow .grow{flex:1;min-width:0}
+.steptools{display:flex;gap:4px;align-items:center;margin-top:4px;flex-wrap:wrap}
+.steptools img{width:72px;height:54px;object-fit:cover;border-radius:8px}
+.savebar{position:sticky;bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 8px);padding:8px 0}
+.paste{background:var(--accent-soft);border:none}
+.paste h2{color:var(--accent-text)}
+.hint{font-size:13px;color:var(--sub);margin:6px 0 0}
+.empty{text-align:center;padding:40px 12px;color:var(--sub)}
+.empty .ico{width:64px;height:64px;margin:0 auto 10px;border-radius:50%;background:var(--accent-soft);color:var(--accent-text);display:flex;align-items:center;justify-content:center}
+.choice{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.choice button{flex-direction:column;padding:16px 8px;gap:6px;font-weight:700;border-radius:var(--r)}
+.choice button small{font-weight:400;color:var(--sub);font-size:12px}
+.log{list-style:none;padding:0;margin:0}
+.log li{padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+details summary{cursor:pointer;color:var(--accent-text);font-size:14px}
+details ol{padding-left:20px;margin:6px 0;font-size:14px;color:var(--sub)}
+#tabs{position:fixed;left:0;right:0;bottom:0;height:calc(var(--tabh) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--card);border-top:1px solid var(--line);display:flex;z-index:20}
+#tabs a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:11px;color:var(--muted);text-decoration:none}
+#tabs a.on{color:var(--accent-text)}
+body.cooking #tabs{display:none}
+#timers{position:fixed;left:0;right:0;bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 8px);display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 12px;z-index:30;pointer-events:none}
+body.cooking #timers{bottom:calc(env(safe-area-inset-bottom) + 86px)}
+.timer{pointer-events:auto;background:var(--ink);color:var(--bg);border:none;border-radius:999px;padding:8px 14px;font-weight:700;font-variant-numeric:tabular-nums}
+.timer.done{background:var(--accent);color:var(--accent-ink);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.6}}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:50;max-width:calc(100% - 32px);opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+#viewer{position:fixed;inset:0;background:#000;z-index:60;overflow:auto;display:none}
+#viewer.show{display:block}
+#viewer img{width:100%;display:block;margin:calc(env(safe-area-inset-top) + 56px) 0 40px}
+#viewer button{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:12px;background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:50%;width:40px;height:40px;padding:0}
+.cook{min-height:100dvh;display:flex;flex-direction:column;padding-bottom:calc(env(safe-area-inset-bottom) + 12px)}
+.cook .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:4px 0 18px}
+.cook .bar div{height:100%;background:var(--accent);transition:width .2s}
+.cook .body{flex:1}
+.cook .big-text{font-size:24px;line-height:1.75;margin:0 0 16px;white-space:pre-wrap;word-break:break-word}
+.cook .big-text .tchip{font-size:20px;padding:2px 12px}
+.cook .body img{width:100%;border-radius:12px;margin-bottom:12px}
+.cook .nav{display:grid;grid-template-columns:1fr 2fr;gap:10px}
+.cook .nav button{padding:16px;font-size:18px;font-weight:700}
+.cook .ings li{font-size:18px;cursor:pointer}
+.cook .ings li.got{color:var(--muted);text-decoration:line-through}
+.awake{font-size:12px;color:var(--ok)}
+.src-badge{font-size:11px;color:var(--muted)}
+.welcome{background:var(--accent-soft);border:none}
+.shop{list-style:none;margin:0;padding:0}
+.shop li{border-bottom:1px solid var(--line)}
+.shop label{display:flex;align-items:center;gap:12px;padding:10px 2px;cursor:pointer}
+.shop input{width:22px;height:22px;flex:none;accent-color:var(--accent);margin:0}
+.shop .nm{flex:1;min-width:0}
+.shop .nm small{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shop .q{font-weight:600;white-space:nowrap}
+.shop input:not(:checked)~.nm,.shop input:not(:checked)~.q{color:var(--muted)}
+.shop-r{padding:6px 0;border-bottom:1px solid var(--line)}
+.shop-r a{color:inherit;font-weight:600;text-decoration:none;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="timers"></div>
+<nav id="tabs"></nav>
+<div id="toast" role="status"></div>
+<div id="viewer"><button data-act="close-viewer" aria-label="閉じる"></button><img alt=""></div>
+
+<script>
+'use strict';
+const VERSION = '0.3.0';
+
+/* ---------- 小物 ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const ls = {
+  get(k, d = '') { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+const PEOPLE = ['Dan', 'Miki'];
+const me = () => ls.get('me');
+const appTitle = () => ls.get('appTitle') || 'うちのレシピ';
+
+const svg = (d, fill = 'none') => `<svg viewBox="0 0 24 24" width="22" height="22" fill="${fill}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const HEART = '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>';
+const ICON = {
+  plus: svg('<path d="M12 5v14M5 12h14"/>'),
+  home: svg('<path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/>'),
+  heart: svg(HEART),
+  heartOn: svg(HEART, 'currentColor'),
+  gear: svg('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>'),
+  back: svg('<path d="M15 6l-6 6 6 6"/>'),
+  next: svg('<path d="M9 6l6 6-6 6"/>'),
+  edit: svg('<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/>'),
+  trash: svg('<path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/>'),
+  clock: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>'),
+  link: svg('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'),
+  camera: svg('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
+  chef: svg('<path d="M7 17h10v3H7z"/><path d="M7 17v-4a4 4 0 1 1 2.5-7.5 4 4 0 0 1 5 0A4 4 0 1 1 17 13v4"/>'),
+  x: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
+  list: svg('<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>'),
+  check: svg('<path d="M5 12l5 5 9-10"/>'),
+  pen: svg('<path d="M4 20h16"/><path d="M14 4l4 4-9 9H5v-4z"/>'),
+  text: svg('<path d="M5 5h14M5 10h14M5 15h9M5 20h6"/>'),
+  up: svg('<path d="M6 15l6-6 6 6"/>'),
+  down: svg('<path d="M6 9l6 6 6-6"/>'),
+  bowl: svg('<path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 7c0-1 1-1 1-2M12 7c0-1 1-1 1-2M16 7c0-1 1-1 1-2"/>'),
+  cart: svg('<path d="M3 4h2l2.4 11h10.2L20 8H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/>'),
+  copy: svg('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>'),
+  share: svg('<path d="M12 4v11M8 8l4-4 4 4"/><path d="M5 12v7h14v-7"/>'),
+  user: svg('<circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/>'),
+};
+
+function toast(msg, ms = 2600) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+/* ---------- 保存先（IndexedDB） ---------- */
+let _db;
+function openDB() {
+  return _db || (_db = new Promise((res, rej) => {
+    const r = indexedDB.open('family-recipes', 1);
+    r.onupgradeneeded = () => {
+      r.result.createObjectStore('recipes', { keyPath: 'id' });
+      r.result.createObjectStore('photos', { keyPath: 'id' });
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  }));
+}
+async function tx(store, mode, fn) {
+  const d = await openDB();
+  return new Promise((res, rej) => {
+    const t = d.transaction(store, mode);
+    const req = fn(t.objectStore(store));
+    t.oncomplete = () => res(req && req.result);
+    t.onerror = () => rej(t.error);
+  });
+}
+const db = {
+  all: s => tx(s, 'readonly', st => st.getAll()),
+  get: (s, k) => tx(s, 'readonly', st => st.get(k)),
+  put: (s, v) => tx(s, 'readwrite', st => st.put(v)),
+  del: (s, k) => tx(s, 'readwrite', st => st.delete(k)),
+};
+
+let RECIPES = [];
+async function loadRecipes() {
+  RECIPES = (await db.all('recipes')).filter(r => !r.deleted);
+}
+const findRecipe = id => RECIPES.find(r => r.id === id);
+
+/* ---------- 写真 ---------- */
+const PHOTO_URLS = new Map();
+async function photoUrl(id) {
+  if (PHOTO_URLS.has(id)) return PHOTO_URLS.get(id);
+  const p = await db.get('photos', id);
+  const u = p ? URL.createObjectURL(p.blob) : '';
+  PHOTO_URLS.set(id, u);
+  return u;
+}
+function imgTag(p, attrs = '') {
+  if (!p) return '';
+  if (p.id) return `<img data-photo="${esc(p.id)}" alt="" ${attrs}>`;
+  return `<img src="${esc(p.url)}" referrerpolicy="no-referrer" alt="" loading="lazy" ${attrs}>`;
+}
+async function hydratePhotos() {
+  for (const el of $$('img[data-photo]')) {
+    if (!el.getAttribute('src')) el.src = await photoUrl(el.dataset.photo);
+  }
+}
+async function resizeImage(blob, max) {
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = rej;
+      i.src = url;
+    });
+    const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.naturalWidth * s);
+    c.height = Math.round(img.naturalHeight * s);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return await new Promise(res => c.toBlob(b => res(b || blob), 'image/jpeg', 0.85));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+async function storePhoto(blob, max = 1400) {
+  const b = await resizeImage(blob, max);
+  const id = uid();
+  await db.put('photos', { id, blob: b, createdAt: Date.now() });
+  return id;
+}
+function pickFiles(multiple = true) {
+  return new Promise(res => {
+    const i = document.createElement('input');
+    i.type = 'file';
+    i.accept = 'image/*';
+    i.multiple = multiple;
+    i.style.display = 'none';
+    i.onchange = () => { res([...i.files]); i.remove(); };
+    document.body.appendChild(i);
+    i.click();
+  });
+}
+async function gcPhotos() {
+  const used = new Set();
+  for (const r of await db.all('recipes')) {
+    if (r.deleted) continue;
+    for (const p of allPhotos(r)) if (p.id) used.add(p.id);
+  }
+  for (const p of await db.all('photos')) {
+    if (!used.has(p.id) && Date.now() - (p.createdAt || 0) > 3600e3) await db.del('photos', p.id);
+  }
+}
+const allPhotos = r => [...(r.photos || []), ...(r.refImages || []), ...(r.steps || []).map(s => s.photo).filter(Boolean), ...(r.cooked || []).flatMap(c => c.photos || [])];
+const cookedPhotos = r => (r.cooked || []).flatMap(c => c.photos || []);
+
+/* ---------- 分量の読み取りと換算 ---------- */
+function normalize(s) {
+  return String(s ?? '')
+    .replace(/[０-９Ａ-Ｚａ-ｚ．／％（）]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/[　 ]/g, ' ')
+    .replace(/[～~]/g, '〜');
+}
+const FRAC = { '½': 1 / 2, '⅓': 1 / 3, '⅔': 2 / 3, '¼': 1 / 4, '¾': 3 / 4 };
+const PRE_UNITS = ['大さじ', '小さじ'];
+const METRIC = ['g', 'kg', 'ml', 'mL', 'cc', 'L', 'l', 'cm'];
+const COUNT_UNITS = ['個', '枚', '本', '尾', '丁', '玉', '株', '匹', 'つ', 'パック', '缶', '袋', '束', '房', '切れ', '切', '粒', 'ケ', 'コ', '箱', '片', 'かけ'];
+const POST_UNITS = [...new Set([...METRIC, 'カップ', 'さじ', '合', '杯', '膳', '滴', 'つまみ', '振り', ...COUNT_UNITS])].sort((a, b) => b.length - a.length);
+const FREE = ['各少々', '各適量', 'ひとつまみ', 'ひとかけ', 'お好みで', 'お好み', '好みで', 'たっぷり', '少々', '適量', '適宜', '少量', '少し'];
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const RE_NUM = '(?:\\d+(?:\\.\\d+)?\\s*と\\s*\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:\\.\\d+)?\\s*[½⅓⅔¼¾]?|[½⅓⅔¼¾])';
+const RE_SEP = '[\\s:：…・.]*';
+const rePre = new RegExp(`^(.+?)${RE_SEP}(大さじ|小さじ|カップ)\\s*(${RE_NUM})(?:\\s*〜\\s*(${RE_NUM}))?(.*)$`);
+const rePost = new RegExp(`^(.+?)${RE_SEP}(${RE_NUM})(?:\\s*〜\\s*(${RE_NUM}))?\\s*(${POST_UNITS.map(reEsc).join('|')})?(.*)$`);
+const reFree = new RegExp(`^(.+?)${RE_SEP}(${FREE.join('|')})(.*)$`);
+
+function parseNum(s) {
+  if (s == null) return null;
+  s = normalize(String(s)).replace(/\s/g, '');
+  if (!s) return null;
+  let m;
+  if ((m = s.match(/^(\d+(?:\.\d+)?)と(\d+)\/(\d+)$/))) return +m[1] + m[2] / m[3];
+  if ((m = s.match(/^(\d+)\/(\d+)$/))) return +m[2] ? m[1] / m[2] : null;
+  if ((m = s.match(/^(\d*(?:\.\d+)?)([½⅓⅔¼¾])$/))) return (parseFloat(m[1]) || 0) + FRAC[m[2]];
+  if ((m = s.match(/^(\d+)半$/))) return +m[1] + 0.5;
+  if (/^\d+(?:\.\d+)?$/.test(s)) return parseFloat(s);
+  return null;
+}
+
+function parseIngredient(line) {
+  let s = normalize(line).trim().replace(/^[・\-*•▪︎✓✔→▶︎▷]+\s*/, '');
+  let group = '';
+  let m = s.match(/^[(\[【<＜〈《]\s*([A-Za-z]|[★☆◎●○◆◇■□▲△])\s*[)\]】>＞〉》]\s*/) || s.match(/^([A-Z])\s+/) || s.match(/^([★☆◎●○◆◇■□▲△])\s*/);
+  if (m) { group = m[1]; s = s.slice(m[0].length); }
+  // 「ニラ（1/3束）」のように量がかっこの中にある書き方
+  m = s.match(/^(.+?)\s*\(\s*([^()]+?)\s*\)\s*$/);
+  if (m && !/\d/.test(m[1]) && (new RegExp(`^(?:大さじ|小さじ|カップ)?\\s*${RE_NUM}`).test(m[2]) || FREE.some(f => m[2].startsWith(f)))) s = m[1] + ' ' + m[2];
+  // 見出し行（【たれ】など）
+  const hm = s.match(/^[【\[<＜〈《■□◆◇▼▽]\s*([^】\]>＞〉》]{1,15})\s*[】\]>＞〉》]?\s*[:：]?$/) || s.match(/^([^\d]{1,12})[:：]$/);
+  if (hm && !/\d/.test(s)) return { header: true, name: hm[1].trim() };
+  s = s.replace(/^[^\p{L}\p{N}(]+/u, '');
+  const out = { name: s, amount: null, amount2: null, unit: '', note: '', group };
+  if ((m = s.match(rePre))) {
+    Object.assign(out, { name: m[1], unit: m[2], amount: parseNum(m[3]), amount2: parseNum(m[4]), note: m[5] });
+  } else if ((m = s.match(rePost)) && !/^\d+$/.test(m[1].trim())) {
+    Object.assign(out, { name: m[1], amount: parseNum(m[2]), amount2: parseNum(m[3]), unit: m[4] || '', note: m[5] });
+  } else if ((m = s.match(reFree))) {
+    Object.assign(out, { name: m[1], unit: m[2], note: m[3] });
+  }
+  if (out.note.startsWith('分') && out.unit) { out.unit += '分'; out.note = out.note.slice(1); }
+  out.name = out.name.replace(/[\s:：…・.]+$/, '').trim();
+  out.note = out.note.trim();
+  if (out.amount == null) out.amount2 = null;
+  return out;
+}
+
+function fmtAmount(v, unit) {
+  if (METRIC.includes(unit)) {
+    if (v >= 100) return String(Math.round(v / 5) * 5);
+    if (v >= 10) return String(Math.round(v));
+    return String(Math.round(v * 10) / 10);
+  }
+  const w = Math.floor(v + 1e-9);
+  const r = v - w;
+  const C = [[0, ''], [1 / 4, '¼'], [1 / 3, '⅓'], [1 / 2, '½'], [2 / 3, '⅔'], [3 / 4, '¾'], [1, '']];
+  let best = C[0];
+  for (const c of C) if (Math.abs(c[0] - r) < Math.abs(best[0] - r)) best = c;
+  const W = w + (best[0] === 1 ? 1 : 0);
+  if (W === 0 && !best[1]) return v > 0 ? '¼' : '0';
+  if (W === 0) return best[1];
+  return best[1] ? `${W}と${best[1]}` : String(W);
+}
+function qtyText(ing, k = 1) {
+  let u = ing.unit || '';
+  if (ing.amount == null) return u;
+  // 小さじ3以上は大さじに直す（小さじ3 = 大さじ1）
+  if (u === '小さじ' && k !== 1 && ing.amount * k >= 3 && ing.amount2 == null) {
+    const t = (ing.amount * k) / 3;
+    if (Math.abs(t * 4 - Math.round(t * 4)) < 0.05 || Math.abs(t * 3 - Math.round(t * 3)) < 0.05) return '大さじ' + fmtAmount(t, '大さじ');
+  }
+  const a = fmtAmount(ing.amount * k, u);
+  const b = ing.amount2 != null ? '〜' + fmtAmount(ing.amount2 * k, u) : '';
+  return PRE_UNITS.includes(u) ? u + a + b : a + b + u;
+}
+function noteText(note, k) {
+  if (!note) return '';
+  if (k === 1) return note;
+  return note.replace(/(\d+(?:\.\d+)?)\s*(kg|g|ml|cc)/g, (_, n, u) => fmtAmount(n * k, u) + u);
+}
+function isApprox(ing, k) {
+  if (ing.amount == null || k === 1) return false;
+  if (!COUNT_UNITS.some(u => (ing.unit || '').startsWith(u))) return false;
+  const v = ing.amount * k;
+  return Math.abs(v - Math.round(v)) > 0.01;
+}
+function amtToInput(ing) {
+  const f = v => {
+    if (v == null) return '';
+    const w = Math.floor(v + 1e-9), r = v - w;
+    for (const d of [2, 3, 4]) {
+      const n = Math.round(r * d);
+      if (n > 0 && n < d && Math.abs(r - n / d) < 0.01) return (w ? w + 'と' : '') + n + '/' + d;
+    }
+    return String(Math.round(v * 100) / 100);
+  };
+  return f(ing.amount) + (ing.amount2 != null ? '〜' + f(ing.amount2) : '');
+}
+function parseAmountInput(s) {
+  s = normalize(s).trim();
+  if (!s) return { a: null, b: null, ok: true };
+  const [x, y] = s.split(/\s*〜\s*/);
+  const a = parseNum(x), b = y != null ? parseNum(y) : null;
+  return { a, b, ok: a != null };
+}
+
+/* ---------- 文章からレシピを組み立てる ---------- */
+const STEPNUM = /^(?:step\s*)?(?:(\d{1,2})\s*[.)、:：]|[(](\d{1,2})[)]|([①-⑳])|(\d)️?⃣|(\d{1,2})\s+(?=\S))\s*/i;
+const SERV_RE = /(\d+)\s*(人分|人前|名分|個分|枚分|本分|皿分|人)/;
+
+function parseRecipeText(raw, { dropIntro = false } = {}) {
+  const lines = normalize(raw).split(/\r?\n/).map(l => l.trim());
+  const lead = l => l.replace(/^[^\p{L}\p{N}]+/u, '');
+  const H_ING = /^(材料|ingredients?|用意するもの|使う材料|食材)/i;
+  const H_STEP = /^(作り方|つくり方|作りかた|手順|調理手順|レシピ手順|how\s*to|steps?|recipe)/i;
+  const H_MEMO = /^(ポイント|コツ|メモ|point|tips?|保存|注意|アレンジ|ワンポイント)/i;
+  let servings = null, servingsUnit = '人分', mode = null;
+  const ings = [], stepLines = [], memo = [], pre = [];
+  const takeServ = l => {
+    const m = l.match(SERV_RE);
+    if (m && !servings) { servings = +m[1]; servingsUnit = m[2] === '人' || m[2] === '人前' || m[2] === '名分' ? '人分' : m[2]; }
+  };
+  const hasAmt = i => i.amount != null || FREE.includes(i.unit);
+  const GROUP_WORD = /[A-Z]$|たれ|タレ|ソース|調味料|合わせ|トッピング|生地|衣|下味|仕上げ/;
+  let blanks = 0;
+  for (const l of lines) {
+    if (!l) {
+      // 材料の後に空行が続いたら、そこから先は宣伝やSNSの案内とみなす
+      if (++blanks >= 2 && mode === 'ing' && ings.some(hasAmt)) mode = 'tail';
+      continue;
+    }
+    blanks = 0;
+    if (/https?:\/\/|www\.|\S+@\S+\.\w+/.test(l) || /^(#\S+\s*)+$/.test(l)) continue;
+    const L = lead(l);
+    const ingAt = L.search(/材料|ingredients/i);
+    const isIngHead = (L.length <= 24 && H_ING.test(L))
+      || (mode !== 'step' && L.length <= 40 && ingAt >= 0 && ingAt <= 15 && !/\d/.test(L.slice(0, ingAt)));
+    if (isIngHead) {
+      if (ings.length && !ings.some(hasAmt)) ings.length = 0;
+      mode = 'ing'; takeServ(l); continue;
+    }
+    if (L.length <= 24 && H_STEP.test(L)) { mode = 'step'; continue; }
+    if (L.length <= 24 && H_MEMO.test(L)) { mode = 'memo'; if (L.length > 6) memo.push(l); continue; }
+    if (mode !== 'step' && /^[^\p{L}\p{N}]*\(?\d+\s*(人|名)[^)]{0,3}\)?$/u.test(l)) { takeServ(l); continue; }
+    if (mode === 'tail') continue;
+    if (mode === 'ing') {
+      const p = parseIngredient(l);
+      if (p.header || hasAmt(p)) ings.push(p);
+      else if (p.name.length <= 10 && GROUP_WORD.test(p.name)) ings.push({ header: true, name: p.name });
+      else if (p.name.length <= 15) ings.push(p);
+    }
+    else if (mode === 'step') stepLines.push(l);
+    else if (mode === 'memo') memo.push(l);
+    else pre.push(l);
+  }
+  let title = '';
+  if (pre.length && pre[0].length <= 40 && parseIngredient(pre[0]).amount == null && !STEPNUM.test(pre[0])) {
+    title = lead(pre.shift()).replace(/[\s【】]+$/, '');
+  }
+  if (!ings.length && !stepLines.length) {
+    for (const l of pre) {
+      if (STEPNUM.test(l)) { stepLines.push(l); continue; }
+      const p = parseIngredient(l);
+      if (!stepLines.length && (p.amount != null || FREE.includes(p.unit))) ings.push(p);
+      else if (stepLines.length) stepLines.push(l);
+      else memo.push(l);
+    }
+  } else if (!dropIntro) {
+    memo.unshift(...pre);
+  }
+  if (!servings) takeServ(normalize(raw));
+  return {
+    title, servings, servingsUnit,
+    ingredients: ings.filter(i => i.name),
+    steps: buildSteps(stepLines),
+    memo: memo.join('\n'),
+  };
+}
+function buildSteps(lines) {
+  const numbered = lines.some(l => STEPNUM.test(l));
+  const out = [];
+  for (const l of lines) {
+    const m = l.match(STEPNUM);
+    if (m) out.push(l.slice(m[0].length).trim());
+    else if (numbered && out.length) out[out.length - 1] += l;
+    else out.push(l.replace(/^[・\-*•●○◎★☆◆◇■□]+\s*/, ''));
+  }
+  return out.filter(Boolean).map(text => ({ text }));
+}
+
+/* ---------- リンクから読み取る ---------- */
+const SITES = [
+  [/kurashiru\.com$/, 'クラシル'], [/delishkitchen\.tv$/, 'デリッシュキッチン'], [/oceans-nadia\.com$/, 'Nadia'],
+  [/cookpad\.com$/, 'クックパッド'], [/(youtube\.com|youtu\.be)$/, 'YouTube'], [/instagram\.com$/, 'Instagram'],
+  [/lettuceclub\.net$/, 'レタスクラブ'], [/orangepage\.net$/, 'オレンジページ'], [/kyounoryouri\.jp$/, 'みんなのきょうの料理'],
+  [/ajinomoto\.co\.jp$/, '味の素パーク'], [/kikkoman\.co\.jp$/, 'キッコーマン'], [/macaro-ni\.jp$/, 'macaroni'],
+];
+function siteName(url) {
+  try {
+    const h = new URL(url).hostname.replace(/^www\./, '');
+    for (const [re, n] of SITES) if (re.test(h)) return n;
+    return h;
+  } catch { return ''; }
+}
+function proxyBase() {
+  const s = ls.get('proxyUrl');
+  if (s) return s;
+  if (['localhost', '127.0.0.1'].includes(location.hostname)) return '/fetch';
+  return '';
+}
+async function proxyFetch(url) {
+  const b = proxyBase();
+  if (!b) throw new Error('NOPROXY');
+  const r = await fetch(b + '?url=' + encodeURIComponent(url));
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r;
+}
+async function fetchHtml(url) {
+  const r = await proxyFetch(url);
+  const buf = await r.arrayBuffer();
+  let cs = (r.headers.get('Content-Type') || '').match(/charset=["']?([\w-]+)/i)?.[1];
+  if (!cs) cs = new TextDecoder('latin1').decode(buf.slice(0, 4096)).match(/<meta[^>]+charset=["']?([\w-]+)/i)?.[1];
+  try { return new TextDecoder(cs || 'utf-8').decode(buf); } catch { return new TextDecoder().decode(buf); }
+}
+const plain = s => new DOMParser().parseFromString(String(s ?? ''), 'text/html').body.textContent.replace(/\s+\n/g, '\n').trim();
+function firstImage(x) {
+  if (!x) return '';
+  if (typeof x === 'string') return x;
+  if (Array.isArray(x)) return firstImage(x[0]);
+  return x.url || x.contentUrl || '';
+}
+function findRecipeLd(j) {
+  if (!j || typeof j !== 'object') return null;
+  if (Array.isArray(j)) { for (const x of j) { const r = findRecipeLd(x); if (r) return r; } return null; }
+  const t = j['@type'];
+  if (t === 'Recipe' || (Array.isArray(t) && t.includes('Recipe'))) return j;
+  return findRecipeLd(j['@graph']) || findRecipeLd(j.mainEntity) || null;
+}
+function ldSteps(x) {
+  if (!x) return [];
+  if (typeof x === 'string') return buildSteps(plain(x).split(/\n+/));
+  if (Array.isArray(x)) return x.flatMap(ldSteps);
+  if (x['@type'] === 'HowToSection') return ldSteps(x.itemListElement);
+  const text = plain(x.text || x.name || '');
+  return text ? [{ text }] : [];
+}
+function isoMinutes(s) {
+  const m = String(s || '').match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?/);
+  if (!m) return null;
+  const v = (+m[1] || 0) * 1440 + (+m[2] || 0) * 60 + (+m[3] || 0);
+  return v || null;
+}
+function parseYield(y) {
+  const arr = Array.isArray(y) ? y : [y];
+  for (const v of arr) {
+    const m = normalize(String(v ?? '')).match(/(\d+)(?:\s*〜\s*\d+)?\s*(人|名|個|枚|本|皿|servings?)/i);
+    if (m) return { n: +m[1], unit: /人|名|serving/i.test(m[2]) ? '人分' : m[2] + '分' };
+  }
+  for (const v of arr) {
+    const m = String(v ?? '').match(/\d+/);
+    if (m) return { n: +m[0], unit: '人分' };
+  }
+  return null;
+}
+
+function extractFromHtml(html, url) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const meta = n => doc.querySelector(`meta[property="${n}"],meta[name="${n}"]`)?.content?.trim() || '';
+  const site = siteName(url);
+  const d = newDraft({ source: { type: 'url', url, site } });
+  let ld = null;
+  for (const s of doc.querySelectorAll('script[type="application/ld+json"]')) {
+    try { ld = findRecipeLd(JSON.parse(s.textContent)); } catch {}
+    if (ld) break;
+  }
+  if (ld) {
+    d.title = plain(ld.name);
+    const img = firstImage(ld.image) || meta('og:image');
+    if (img) d.photos = [{ url: new URL(img, url).href }];
+    const y = parseYield(ld.recipeYield);
+    if (y) { d.servings = y.n; d.servingsUnit = y.unit; }
+    d.time = isoMinutes(ld.totalTime) || ((isoMinutes(ld.prepTime) || 0) + (isoMinutes(ld.cookTime) || 0)) || null;
+    d.ingredients = (ld.recipeIngredient || ld.ingredients || []).map(s => parseIngredient(plain(s))).filter(i => i.name);
+    d.steps = ldSteps(ld.recipeInstructions);
+    d.memo = plain(ld.description || '');
+    return d;
+  }
+  d.title = (meta('og:title') || doc.title || '').replace(/\s*[-|｜]\s*YouTube$/, '').trim();
+  const og = meta('og:image');
+  if (og) d.photos = [{ url: new URL(og, url).href }];
+  let text = '';
+  if (site === 'YouTube') {
+    const m = html.match(/"shortDescription":"((?:[^"\\]|\\.)*)"/);
+    if (m) { try { text = JSON.parse(`"${m[1]}"`); } catch {} }
+  } else if (site === 'Instagram') {
+    const desc = meta('og:description') || meta('description');
+    const m = desc.match(/:\s*"([\s\S]*)"\s*\.?$/);
+    text = m ? m[1] : '';
+  }
+  if (site === 'YouTube' || site === 'Instagram') d.title = d.title.replace(/\s*#\S+/g, '').trim();
+  if (!text && site !== 'YouTube') text = meta('og:description');
+  if (text) {
+    const r = parseRecipeText(text, { dropIntro: site === 'YouTube' });
+    d.ingredients = r.ingredients;
+    d.steps = r.steps;
+    if (r.servings) { d.servings = r.servings; d.servingsUnit = r.servingsUnit; }
+    d.memo = d.ingredients.length || d.steps.length ? r.memo : text;
+  }
+  return d;
+}
+
+/* ---------- 下書き ---------- */
+function newDraft(p = {}) {
+  return {
+    id: null, title: '', photos: [], refImages: [], servings: 2, servingsUnit: '人分', time: null,
+    tags: [], ingredients: [], steps: [], memo: '', source: { type: 'manual' }, cooked: [], fav: false, ...p,
+  };
+}
+let DRAFT = null;
+const clone = o => JSON.parse(JSON.stringify(o));
+const PRESET_TAGS = ['主菜', '副菜', '汁物', 'ごはん・麺', 'お弁当', '作り置き', 'おやつ', 'おもてなし'];
+
+/* ---------- タイマー ---------- */
+const TIMERS = [];
+let audioCtx = null;
+function unlockAudio() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch {}
+}
+function beep() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  for (let k = 0; k < 3; k++) {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = 880;
+    o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.0001, t + k * 0.4);
+    g.gain.exponentialRampToValueAtTime(0.4, t + k * 0.4 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + k * 0.4 + 0.3);
+    o.start(t + k * 0.4); o.stop(t + k * 0.4 + 0.32);
+  }
+  navigator.vibrate?.([300, 150, 300]);
+}
+function startTimer(sec, label) {
+  unlockAudio();
+  TIMERS.push({ id: uid(), label, end: Date.now() + sec * 1000, beeped: 0 });
+  renderTimers();
+}
+const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+function renderTimers() {
+  $('#timers').innerHTML = TIMERS.map(t => {
+    const left = Math.max(0, Math.ceil((t.end - Date.now()) / 1000));
+    return `<button class="timer ${left ? '' : 'done'}" data-act="timer-stop" data-id="${t.id}" aria-label="タイマーを止める">${esc(t.label)} ${left ? mmss(left) : '時間です'} ✕</button>`;
+  }).join('');
+}
+setInterval(() => {
+  if (!TIMERS.length) return;
+  const now = Date.now();
+  for (const t of TIMERS) {
+    if (now >= t.end && t.beeped < 12 && now - (t.lastBeep || 0) > 5000) { beep(); t.beeped++; t.lastBeep = now; }
+  }
+  renderTimers();
+}, 500);
+
+const RE_TIME = /(\d+(?:\.\d+)?)(?:\s*〜\s*(\d+(?:\.\d+)?))?\s*(時間|分|秒)(?![量の])/g;
+function withTimers(text, label) {
+  return esc(text).replace(RE_TIME, (m, a, b, u) => {
+    const sec = Math.round(parseFloat(b || a) * (u === '時間' ? 3600 : u === '分' ? 60 : 1));
+    if (!sec || sec > 6 * 3600) return m;
+    return `<button class="tchip" data-act="timer" data-sec="${sec}" data-label="${esc(label)}">${ICON.clock}${m}</button>`;
+  });
+}
+
+/* ---------- 画面の切り替え ---------- */
+let VIEW = '';
+const SERV = {};
+let HOME = { q: '', tag: '', sort: 'new' };
+let COOK = null;
+let ADD_REFS = [];
+
+function route() {
+  const [, view = '', id = ''] = (location.hash.slice(1) || '/').split('/');
+  const prev = VIEW;
+  VIEW = view;
+  document.body.classList.toggle('cooking', view === 'cook');
+  if (prev === 'cook' && view !== 'cook') keepAwake(false);
+  let html = '';
+  if (view === '' || view === 'fav') html = viewHome(view === 'fav');
+  else if (view === 'r') html = findRecipe(id) ? viewDetail(findRecipe(id)) : viewMissing();
+  else if (view === 'edit') {
+    if (id === 'new') { if (!DRAFT || DRAFT.id) DRAFT = newDraft(); }
+    else if (!DRAFT || DRAFT.id !== id) { const r = findRecipe(id); DRAFT = r ? clone(r) : null; }
+    html = DRAFT ? viewEdit() : viewMissing();
+  }
+  else if (view === 'add') html = viewAdd();
+  else if (view === 'cook') html = findRecipe(id) ? viewCook(findRecipe(id)) : viewMissing();
+  else if (view === 'settings') html = viewSettings();
+  else if (view === 'shop') html = viewShop();
+  else html = viewMissing();
+  $('#app').innerHTML = html;
+  if (view === '' || view === 'fav') renderGrid();
+  if (view === 'r') renderIngs(findRecipe(id));
+  if (view === 'cook') { renderCook(); keepAwake(true); }
+  if (prev !== view || view === 'r') window.scrollTo(0, 0);
+  renderTabs();
+  hydratePhotos();
+}
+function rerender() {
+  const y = window.scrollY;
+  route();
+  window.scrollTo(0, y);
+}
+function renderTabs() {
+  const n = cart().length;
+  const tabs = [['', 'ホーム', ICON.home], ['add', '追加', ICON.plus], ['shop', n ? `買い物（${n}）` : '買い物', ICON.cart], ['settings', '設定', ICON.gear]];
+  const cur = VIEW === 'r' || VIEW === 'edit' || VIEW === 'fav' ? '' : VIEW;
+  $('#tabs').innerHTML = tabs.map(([v, l, i]) => `<a href="#/${v}" class="${cur === v ? 'on' : ''}">${i}<span>${l}</span></a>`).join('');
+}
+const viewMissing = () => `<div class="empty"><p>レシピが見つかりませんでした。</p><a href="#/">ホームに戻る</a></div>`;
+
+/* ---------- ホーム ---------- */
+function tagList() {
+  const c = {};
+  for (const r of RECIPES) for (const t of r.tags || []) c[t] = (c[t] || 0) + 1;
+  return Object.keys(c).sort((a, b) => c[b] - c[a]);
+}
+function viewHome(onlyFav) {
+  const tags = tagList();
+  return `
+  <header class="top"><h1>${onlyFav ? 'お気に入り' : esc(appTitle())}</h1>
+    <a class="icon-btn" href="#/add" aria-label="レシピを追加">${ICON.plus}</a></header>
+  ${!me() ? `<div class="card welcome"><h2>このスマホを使うのは？</h2>
+    <div class="row" style="margin-top:8px">${PEOPLE.map(p => `<button class="primary" data-act="set-me" data-name="${p}" style="flex:1">${p}</button>`).join('')}</div>
+    <p class="hint">追加したレシピに名前が付きます。設定からいつでも変えられます。</p></div>` : ''}
+  <input id="q" type="search" placeholder="料理名・食材・タグで探す" value="${esc(HOME.q)}" style="margin:4px 0 8px">
+  ${RECIPES.length ? `<div class="chips">${['', '__fav', ...tags].map(t => `<button class="chip ${HOME.tag === t ? 'on' : ''}" data-act="tag" data-tag="${esc(t)}">${t === '__fav' ? '♥ お気に入り' : t ? esc(t) : 'すべて'}</button>`).join('')}</div>` : ''}
+  <div class="row-between"><span class="muted" id="count"></span>
+    <select id="sort" style="width:auto;padding:4px 8px;font-size:14px;border:none;background:transparent;color:var(--sub)">
+      <option value="new" ${HOME.sort === 'new' ? 'selected' : ''}>新しい順</option>
+      <option value="cooked" ${HOME.sort === 'cooked' ? 'selected' : ''}>よく作る順</option>
+      <option value="name" ${HOME.sort === 'name' ? 'selected' : ''}>名前順</option>
+    </select></div>
+  <div id="grid" class="grid" data-fav="${onlyFav ? 1 : ''}"></div>`;
+}
+function matches(r, q) {
+  if (!q) return true;
+  const hay = normalize([r.title, ...(r.tags || []), ...(r.ingredients || []).map(i => i.name), r.source?.site].join(' ')).toLowerCase();
+  return normalize(q).toLowerCase().split(/\s+/).filter(Boolean).every(w => hay.includes(w));
+}
+function renderGrid() {
+  const g = $('#grid');
+  if (!g) return;
+  const fav = !!g.dataset.fav;
+  let list = RECIPES.filter(r => (!fav || r.fav) && (!HOME.tag || (HOME.tag === '__fav' ? r.fav : (r.tags || []).includes(HOME.tag))) && matches(r, HOME.q));
+  const by = {
+    new: (a, b) => b.createdAt - a.createdAt,
+    cooked: (a, b) => (b.cooked?.length || 0) - (a.cooked?.length || 0) || b.createdAt - a.createdAt,
+    name: (a, b) => a.title.localeCompare(b.title, 'ja'),
+  };
+  list.sort(by[HOME.sort]);
+  $('#count').textContent = `${list.length}件`;
+  if (!RECIPES.length) {
+    g.outerHTML = `<div class="empty" id="grid"><div class="ico">${ICON.bowl}</div>
+      <p><b>最初のレシピを追加しましょう</b><br>リンク・文字の貼り付け・手入力・手書きメモの写真から登録できます。</p>
+      <p><a href="#/add"><button class="primary">レシピを追加</button></a></p>
+      <p><button class="ghost small" data-act="sample">お試しのレシピを入れてみる</button></p></div>`;
+    return;
+  }
+  if (!list.length) { g.innerHTML = `<p class="muted" style="grid-column:1/-1">${fav ? 'レシピ画面の♡を押すとここに集まります。' : '見つかりませんでした。'}</p>`; return; }
+  g.innerHTML = list.map(r => {
+    const p = r.photos?.[0] || cookedPhotos(r).at(-1) || r.refImages?.[0];
+    const sub = [r.source?.site || { handwritten: '手書き', text: '貼り付け' }[r.source?.type] || '手入力', r.time ? `${r.time}分` : '', r.addedBy].filter(Boolean).join('・');
+    return `<a class="rcard" href="#/r/${r.id}"><div class="thumb">${p ? imgTag(p, r.photos?.length ? '' : 'style="object-position:top"') : ICON.bowl}</div>
+      <div class="ct">${r.fav ? '♥ ' : ''}${esc(r.title)}</div><div class="cm">${esc(sub)}</div></a>`;
+  }).join('');
+  hydratePhotos();
+}
+
+/* ---------- レシピ詳細 ---------- */
+function viewDetail(r) {
+  const hero = r.photos?.[0] || cookedPhotos(r).at(-1) || r.refImages?.[0];
+  const n = SERV[r.id] ?? r.servings ?? 2;
+  const empty = !(r.ingredients || []).length && !(r.steps || []).length;
+  const src = r.source || {};
+  return `
+  <header class="top"><a class="icon-btn" href="#/" aria-label="戻る">${ICON.back}</a>
+    <span class="row" style="gap:0">
+      <button class="icon-btn" data-act="fav" data-id="${r.id}" aria-label="お気に入り" style="color:var(--accent)">${r.fav ? ICON.heartOn : ICON.heart}</button>
+      <a class="icon-btn" href="#/edit/${r.id}" aria-label="編集">${ICON.edit}</a></span></header>
+  <div class="hero ${hero ? '' : 'noimg'}" ${hero ? `data-act="view-photo" data-src-id="${esc(hero.id || '')}" data-src-url="${esc(hero.url || '')}"` : ''}>${hero ? imgTag(hero, r.photos?.length ? '' : 'style="object-position:top"') : ICON.bowl}
+    ${(r.photos?.length || 0) > 1 ? `<span class="more">${r.photos.length}枚</span>` : ''}</div>
+  <h1>${esc(r.title)}</h1>
+  <div class="meta">
+    ${src.url ? `<a href="${esc(src.url)}" target="_blank" rel="noopener">${ICON.link}${esc(src.site || '元のページ')}</a>` : ''}
+    ${r.time ? `<span>${ICON.clock}${r.time}分</span>` : ''}
+    ${r.addedBy ? `<span>${ICON.user}${esc(r.addedBy)}が追加</span>` : ''}
+    ${r.cooked?.length ? `<span>${ICON.check}${r.cooked.length}回作った</span>` : ''}
+  </div>
+  ${(r.tags || []).length ? `<div>${r.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+  ${(r.photos?.length || 0) > 1 ? `<div class="thumbs" style="margin-top:10px">${r.photos.slice(1).map(p => `<div class="t" data-act="view-photo" data-src-id="${esc(p.id || '')}" data-src-url="${esc(p.url || '')}">${imgTag(p)}</div>`).join('')}</div>` : ''}
+
+  ${empty && r.refImages?.length ? `<div class="card paste"><h2>メモの文字を起こしますか？</h2>
+    <p class="hint" style="margin:0 0 10px">文字にすると、人数の計算と調理モードが使えるようになります。写真はそのまま残ります。</p>
+    <a href="#/edit/${r.id}"><button class="primary">文字に起こす</button></a></div>` : ''}
+
+  ${(r.ingredients || []).length ? `<section>
+    <div class="row-between" style="margin-bottom:6px"><h2 style="margin:0">材料</h2>
+      <div class="stepper"><button data-act="serv" data-d="-1" aria-label="減らす">−</button><span id="serv-n">${n}${esc(r.servingsUnit || '人分')}</span><button data-act="serv" data-d="1" aria-label="増やす">＋</button></div></div>
+    <ul class="ings" id="ing-list"></ul>
+    <p class="hint" id="serv-hint"></p></section>` : ''}
+
+  ${(r.steps || []).length ? `<section><h2>作り方</h2><ol class="steps">${r.steps.map((s, i) => `
+    <li><span class="num">${i + 1}</span><div class="stext">${withTimers(s.text, `手順${i + 1}`)}${s.photo ? imgTag(s.photo) : ''}</div></li>`).join('')}</ol></section>` : ''}
+
+  ${r.memo ? `<section><h2>メモ・コツ</h2><p style="white-space:pre-wrap;margin:0">${esc(r.memo)}</p></section>` : ''}
+
+  ${r.refImages?.length ? `<section><h2>${src.type === 'handwritten' ? '手書きメモ' : '元のスクショ・メモ'}</h2>
+    <div class="refs">${r.refImages.map(p => `<div data-act="view-photo" data-src-id="${esc(p.id)}">${imgTag(p)}</div>`).join('')}</div>
+    <p class="hint">タップで大きく表示します。</p></section>` : ''}
+
+  ${(r.steps || []).length ? `<button class="primary big" data-act="cook" data-id="${r.id}">${ICON.chef}調理モードで作る</button>` : ''}
+  ${(r.ingredients || []).length ? `<button class="big" data-act="cart-toggle" data-id="${r.id}" style="margin-top:10px">${ICON.cart}<span id="cart-label">${cartLabel(r.id)}</span></button>` : ''}
+
+  <section><div class="row-between"><h2 style="margin:0">作った記録</h2><button class="small" data-act="cooked-open">${ICON.check}作った！</button></div>
+    <div id="cooked-form" hidden class="card">
+      <input id="cooked-note" placeholder="ひとこと（次は砂糖少なめ、など）">
+      <p class="lbl" style="margin-top:10px">作った料理の写真</p>
+      <div class="thumbs" id="cooked-thumbs"></div>
+      <label class="row" style="margin-top:8px;font-size:14px;gap:6px"><input type="checkbox" id="cooked-cover" style="width:20px;height:20px;accent-color:var(--accent)" ${r.photos?.length ? '' : 'checked'}>この写真をレシピの表紙にする</label>
+      <div class="row" style="margin-top:8px;justify-content:flex-end"><button class="small ghost" data-act="cooked-close">やめる</button><button class="small primary" data-act="cooked-save" data-id="${r.id}">記録する</button></div></div>
+    ${r.cooked?.length ? `<ul class="log">${[...r.cooked].reverse().map(c => `<li><b>${new Date(c.at).toLocaleDateString('ja-JP')}</b> ${esc(c.by || '')}${c.note ? `<br><span class="sub">${esc(c.note)}</span>` : ''}${c.photos?.length ? `<div class="thumbs" style="margin-top:6px">${c.photos.map(p => `<div class="t" data-act="view-photo" data-src-id="${esc(p.id)}">${imgTag(p)}</div>`).join('')}</div>` : ''}</li>`).join('')}</ul>` : '<p class="muted">まだ記録がありません。</p>'}
+  </section>
+
+  <p style="text-align:center;margin-top:32px"><button class="ghost danger small" data-act="delete" data-id="${r.id}">${ICON.trash}このレシピを削除</button></p>`;
+}
+function ingItems(r, k) {
+  return (r.ingredients || []).map(i => i.header
+    ? `<li class="head">${esc(i.name)}</li>`
+    : `<li><span>${i.group ? `<span class="grp">${esc(i.group)}</span>` : ''}${esc(i.name)}</span>
+       <span class="q ${k !== 1 && i.amount != null ? 'changed' : ''}">${esc(qtyText(i, k))}${i.note ? ` <span class="sub" style="font-weight:400">${esc(noteText(i.note, k))}</span>` : ''}${isApprox(i, k) ? '<span class="approx">目安</span>' : ''}</span></li>`).join('');
+}
+function renderIngs(r) {
+  const ul = $('#ing-list');
+  if (!ul || !r) return;
+  const base = r.servings || 2;
+  const n = SERV[r.id] ?? base;
+  const k = n / base;
+  ul.innerHTML = ingItems(r, k);
+  $('#serv-n').textContent = n + (r.servingsUnit || '人分');
+  $('#serv-hint').textContent = k === 1 ? '' : `元のレシピは${base}${r.servingsUnit || '人分'}です。少々・適量は換算していません。`;
+}
+
+/* ---------- 調理モード ---------- */
+function viewCook(r) {
+  if (!COOK || COOK.id !== r.id) COOK = { id: r.id, i: 0, got: new Set(), showIngs: false };
+  return `<div class="cook" id="cook"></div>`;
+}
+function renderCook() {
+  const r = findRecipe(COOK.id);
+  const el = $('#cook');
+  if (!r || !el) return;
+  const steps = r.steps || [];
+  const i = Math.min(COOK.i, steps.length - 1);
+  const s = steps[i];
+  const base = r.servings || 2, n = SERV[r.id] ?? base, k = n / base;
+  const last = i === steps.length - 1;
+  el.innerHTML = `
+    <header class="top"><a class="icon-btn" href="#/r/${r.id}" aria-label="調理モードを終わる">${ICON.x}</a>
+      <span class="t-sm" style="font-size:15px">${COOK.showIngs ? '材料' : `手順 ${i + 1} / ${steps.length}`}</span>
+      <button class="icon-btn" data-act="cook-ings" aria-label="材料を表示" style="${COOK.showIngs ? 'color:var(--accent)' : ''}">${ICON.list}</button></header>
+    <div class="bar"><div style="width:${((i + 1) / steps.length) * 100}%"></div></div>
+    <div class="body">
+    ${COOK.showIngs
+      ? `<p class="hint" style="margin:0 0 6px">${n}${esc(r.servingsUnit || '人分')}・用意できたものをタップ</p>
+         <ul class="ings">${(r.ingredients || []).map((g, j) => g.header ? `<li class="head">${esc(g.name)}</li>`
+          : `<li data-act="got" data-j="${j}" class="${COOK.got.has(j) ? 'got' : ''}"><span>${g.group ? `<span class="grp">${esc(g.group)}</span>` : ''}${esc(g.name)}</span><span class="q">${esc(qtyText(g, k))}</span></li>`).join('')}</ul>`
+      : `<p class="big-text">${withTimers(s.text, `手順${i + 1}`)}</p>${s.photo ? imgTag(s.photo) : ''}`}
+    </div>
+    <p class="awake" id="awake"></p>
+    <div class="nav">
+      <button data-act="cook-step" data-d="-1" ${i === 0 ? 'style="visibility:hidden"' : ''}>${ICON.back}前へ</button>
+      ${last ? `<button class="primary" data-act="cook-done" data-id="${r.id}">${ICON.check}できた！</button>`
+        : `<button class="primary" data-act="cook-step" data-d="1">次へ${ICON.next}</button>`}
+    </div>`;
+  updateAwake();
+  hydratePhotos();
+}
+let wakeLock = null;
+async function keepAwake(on) {
+  try {
+    if (on && 'wakeLock' in navigator) {
+      if (!wakeLock || wakeLock.released) wakeLock = await navigator.wakeLock.request('screen');
+    } else if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch {}
+  updateAwake();
+}
+function updateAwake() {
+  const a = $('#awake');
+  if (a) a.textContent = wakeLock && !wakeLock.released ? '画面は自動で消えません' : '';
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && VIEW === 'cook') keepAwake(true);
+});
+let touchX = null;
+document.addEventListener('touchstart', e => { if (VIEW === 'cook') touchX = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', e => {
+  if (VIEW !== 'cook' || touchX == null || COOK.showIngs) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  touchX = null;
+  if (Math.abs(dx) > 70) moveCook(dx < 0 ? 1 : -1);
+});
+function moveCook(d) {
+  const r = findRecipe(COOK.id);
+  COOK.i = Math.max(0, Math.min((r.steps || []).length - 1, COOK.i + d));
+  renderCook();
+}
+
+/* ---------- 追加 ---------- */
+function viewAdd() {
+  return `
+  <header class="top"><h1>レシピを追加</h1></header>
+  <div class="card">
+    <h2>${ICON.link} リンクから</h2>
+    <input id="url" type="url" inputmode="url" placeholder="https://www.kurashiru.com/recipes/..." autocomplete="off">
+    <p class="err" id="url-err"></p>
+    <button class="primary big" data-act="import-url" style="margin-top:10px">読み取る</button>
+    <p class="hint">クラシル・デリッシュキッチン・Nadia・クックパッドなどは写真・材料・作り方まで自動で入ります。YouTubeは概要欄に材料が書いてあれば読み取ります。</p>
+  </div>
+  <div class="card">
+    <h2>${ICON.text} 文字を貼り付け</h2>
+    <textarea id="paste" rows="6" placeholder="ふわとろ親子丼&#10;材料（2人分）&#10;鶏もも肉 1枚&#10;卵 3個&#10;めんつゆ 大さじ3&#10;作り方&#10;1. 鶏肉を一口大に切る&#10;2. ..."></textarea>
+    <p class="err" id="paste-err"></p>
+    <details style="margin-top:8px"><summary>InstagramやスクショからiPhoneで文字をコピーする方法</summary>
+      <ol><li>Instagram：投稿のキャプションを長押し →「コピー」</li>
+      <li>スクショ：写真アプリで開き、右下の「テキスト認識表示」ボタンを押す → 文字をなぞって「コピー」</li>
+      <li>YouTube：概要欄を開いて長押し →「コピー」</li></ol></details>
+    <p class="lbl">スクショも一緒に残す（任意）</p>
+    <div class="thumbs">${ADD_REFS.map((id, i) => `<div class="t"><img data-photo="${esc(id)}" alt=""><button data-act="add-ref-rm" data-i="${i}" aria-label="削除">${ICON.x}</button></div>`).join('')}
+      <button class="thumb-add" data-act="add-ref">${ICON.camera}追加</button></div>
+    <button class="primary big" data-act="import-text" style="margin-top:12px">読み取る</button>
+  </div>
+  <div class="choice">
+    <button data-act="new-manual">${ICON.pen}自分で入力<small>家のレシピを一から書く</small></button>
+    <button data-act="new-handwritten">${ICON.camera}手書きメモを撮る<small>写真のまま保存できます</small></button>
+  </div>`;
+}
+async function importUrl() {
+  const input = $('#url'), err = $('#url-err'), btn = $('[data-act="import-url"]');
+  let url = normalize(input.value).trim();
+  const m = url.match(/https?:\/\/\S+/);
+  if (!m) { err.textContent = 'リンク（https:// から始まるもの）を貼り付けてください。'; return; }
+  url = m[0];
+  err.textContent = '';
+  btn.disabled = true;
+  btn.textContent = '読み取り中…';
+  try {
+    DRAFT = extractFromHtml(await fetchHtml(url), url);
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '読み取る';
+    err.textContent = e.message === 'NOPROXY'
+      ? 'リンクの読み取りはまだ設定されていません。下の「文字を貼り付け」を使ってください。'
+      : 'このページは読み取れませんでした。下の「文字を貼り付け」を使ってください。';
+    return;
+  }
+  if (!DRAFT.ingredients.length && !DRAFT.steps.length) toast('材料と作り方は見つかりませんでした。文字を貼り付けて追加できます。', 4000);
+  location.hash = '#/edit/new';
+}
+function applyParsed(d, text) {
+  const r = parseRecipeText(text);
+  if (!d.title && r.title) d.title = r.title;
+  if (r.servings) { d.servings = r.servings; d.servingsUnit = r.servingsUnit; }
+  if (r.ingredients.length) d.ingredients = r.ingredients;
+  if (r.steps.length) d.steps = r.steps;
+  if (r.memo) d.memo = [d.memo, r.memo].filter(Boolean).join('\n');
+  return r.ingredients.length + r.steps.length > 0;
+}
+
+/* ---------- 編集・確認 ---------- */
+function viewEdit() {
+  const d = DRAFT;
+  const isNew = !d.id;
+  const blank = !d.ingredients.some(i => i.name) && !d.steps.some(s => s.text);
+  const allTags = [...new Set([...PRESET_TAGS, ...tagList(), ...d.tags])];
+  return `
+  <header class="top"><button class="icon-btn" data-act="cancel-edit" aria-label="戻る">${ICON.back}</button>
+    <h1 class="t-sm">${isNew ? (d.source.type === 'manual' ? 'レシピを書く' : '確認して保存') : 'レシピを編集'}</h1><span style="width:40px"></span></header>
+  ${d.source?.url ? `<p class="hint" style="margin-top:0">${esc(d.source.site)}から読み取りました。違うところは直してから保存してください。</p>` : ''}
+
+  ${d.refImages.length ? `<section style="margin-top:8px"><h2>${d.source.type === 'handwritten' ? '手書きメモ' : '元のスクショ'}</h2>
+    <div class="thumbs">${d.refImages.map((p, i) => `<div class="t" data-act="view-photo" data-src-id="${esc(p.id)}">${imgTag(p)}<button data-act="rm-ref" data-i="${i}" aria-label="削除">${ICON.x}</button></div>`).join('')}
+    <button class="thumb-add" data-act="add-ref-edit">${ICON.camera}追加</button></div></section>` : ''}
+
+  ${blank && d.source.type !== 'manual' ? `<div class="card paste"><h2>${ICON.text} 文字を貼り付けて自動入力</h2>
+    <p class="hint" style="margin:0 0 8px">${d.refImages.length ? 'メモの写真を開いて「テキスト認識表示」で文字をコピーし、ここに貼り付けます。' : 'キャプションや概要欄の文字を貼り付けると、材料と作り方に振り分けます。'}</p>
+    <textarea id="edit-paste" rows="5"></textarea><p class="err" id="edit-paste-err"></p>
+    <button class="primary" data-act="edit-parse" style="margin-top:8px;width:100%">材料と作り方に振り分ける</button>
+    <p class="hint">貼り付けずに、下の欄へ直接書いても大丈夫です。</p></div>` : ''}
+
+  <label class="lbl" for="f-title">料理名</label>
+  <input id="f-title" data-f="title" value="${esc(d.title)}" placeholder="うちのハンバーグ">
+  <p class="err" id="err-title"></p>
+
+  <p class="lbl">追加した人</p>
+  <div class="row">${PEOPLE.map(p => `<button class="chip ${(d.addedBy || me()) === p ? 'on' : ''}" data-act="set-by" data-name="${p}" style="flex:1;padding:8px">${p}</button>`).join('')}</div>
+
+  <p class="lbl">料理の写真（1枚目が表紙）</p>
+  <div class="thumbs">${d.photos.map((p, i) => `<div class="t">${imgTag(p)}<button data-act="rm-photo" data-i="${i}" aria-label="削除">${ICON.x}</button>${i ? `<span class="cover-btn" data-act="cover" data-i="${i}">表紙にする</span>` : '<span class="cover-btn on">表紙</span>'}</div>`).join('')}
+    <button class="thumb-add" data-act="add-photo">${ICON.camera}追加</button></div>
+
+  <div class="two">
+    <div><label class="lbl">分量</label><div class="row" style="gap:4px"><input data-f="servings" type="number" inputmode="numeric" min="1" value="${d.servings ?? ''}" style="width:64px">
+      <input data-f="servingsUnit" value="${esc(d.servingsUnit || '人分')}" style="flex:1"></div></div>
+    <div><label class="lbl">調理時間（分）</label><input data-f="time" type="number" inputmode="numeric" min="0" value="${d.time ?? ''}" placeholder="20"></div>
+  </div>
+
+  <p class="lbl">タグ</p>
+  <div class="chips wrap">${allTags.map(t => `<button class="chip ${d.tags.includes(t) ? 'on' : ''}" data-act="tog-tag" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div>
+  <div class="row" style="margin-top:4px"><input id="newtag" placeholder="タグを追加（例：鶏肉）"><button data-act="add-tag" class="small">追加</button></div>
+
+  <section><h2>材料</h2>
+    <p class="hint" style="margin:-6px 0 8px">量は「1と1/2」「1/3」「2〜3」のように書けます。単位を「少々」「適量」にすると人数を変えても計算しません。</p>
+    <div>${d.ingredients.map(ingRow).join('')}</div>
+    <div class="row"><button class="small" data-act="add-ing">${ICON.plus}材料</button><button class="small ghost" data-act="add-head">${ICON.plus}見出し（A、たれ など）</button></div>
+    <datalist id="units">${['大さじ', '小さじ', 'カップ', 'g', 'ml', '個', '枚', '本', '片', '少々', '適量', 'ひとつまみ', 'お好みで', '袋', 'パック', '缶', '丁', '合', 'cc', 'kg'].map(u => `<option value="${u}">`).join('')}</datalist>
+  </section>
+
+  <section><h2>作り方</h2>
+    <div>${d.steps.map(stepRow).join('')}</div>
+    <button class="small" data-act="add-step">${ICON.plus}手順</button>
+  </section>
+
+  <section><h2>メモ・コツ</h2>
+    <textarea data-f="memo" rows="3" placeholder="パン粉は牛乳でふやかすとふっくら">${esc(d.memo)}</textarea></section>
+
+  <div class="savebar"><button class="primary big" data-act="save">保存する</button></div>`;
+}
+function ingRow(g, i) {
+  const rm = `<button class="xbtn" data-act="rm-ing" data-i="${i}" aria-label="削除">${ICON.x}</button>`;
+  if (g.header) return `<div class="ingrow head"><input data-ing="${i}" data-k="name" value="${esc(g.name)}" placeholder="見出し（A、たれ など）">${rm}</div>`;
+  return `<div class="ingrow">
+    <input data-ing="${i}" data-k="name" value="${esc((g.group ? g.group + ' ' : '') + g.name)}" placeholder="食材">
+    <input data-ing="${i}" data-k="amt" value="${esc(g._amt ?? amtToInput(g))}" placeholder="量">
+    <input data-ing="${i}" data-k="unit" value="${esc(g.unit)}" list="units" placeholder="単位">${rm}</div>
+    ${g.note ? `<p class="hint" style="margin:-4px 0 6px 4px">補足：${esc(g.note)} <button class="ghost small" data-act="rm-note" data-i="${i}" style="padding:0 4px">消す</button></p>` : ''}`;
+}
+function stepRow(s, i) {
+  return `<div class="steprow"><span class="num">${i + 1}</span><div class="grow">
+    <textarea data-step="${i}" rows="2" placeholder="玉ねぎをみじん切りにする">${esc(s.text)}</textarea>
+    <div class="steptools">
+      ${s.photo ? `${imgTag(s.photo)}<button class="small ghost" data-act="rm-step-photo" data-i="${i}">写真を外す</button>` : `<button class="small ghost" data-act="step-photo" data-i="${i}">${ICON.camera}写真</button>`}
+      <span style="flex:1"></span>
+      <button class="xbtn" data-act="mv-step" data-i="${i}" data-d="-1" aria-label="上へ">${ICON.up}</button>
+      <button class="xbtn" data-act="mv-step" data-i="${i}" data-d="1" aria-label="下へ">${ICON.down}</button>
+      <button class="xbtn" data-act="rm-step" data-i="${i}" aria-label="削除">${ICON.x}</button>
+    </div></div></div>`;
+}
+async function saveDraft() {
+  const d = DRAFT;
+  d.title = (d.title || '').trim();
+  if (!d.title) {
+    $('#err-title').textContent = '料理名を入れてください。';
+    $('#f-title').focus();
+    return;
+  }
+  const btn = $('[data-act="save"]');
+  btn.disabled = true;
+  btn.textContent = '保存中…';
+  d.ingredients = d.ingredients.map(g => {
+    if (g.header) return { header: true, name: (g.name || '').trim() };
+    const out = { ...g };
+    if (out._amt !== undefined) {
+      const p = parseAmountInput(out._amt);
+      if (p.ok) { out.amount = p.a; out.amount2 = p.b; }
+      else { out.amount = null; out.amount2 = null; out.unit = (normalize(out._amt).trim() + (out.unit || '')).trim(); }
+      delete out._amt;
+    }
+    if (FREE.includes(out.unit)) { out.amount = null; out.amount2 = null; }
+    out.name = (out.name || '').trim();
+    return out;
+  }).filter(g => g.name);
+  d.steps = d.steps.map(s => ({ ...s, text: (s.text || '').trim() })).filter(s => s.text || s.photo);
+  d.servings = d.servings > 0 ? d.servings : null;
+  // ネット上の写真は手元に保存しておく（元ページが消えても見られるように）
+  for (let i = 0; i < d.photos.length; i++) {
+    const p = d.photos[i];
+    if (p.url && !p.id) {
+      try {
+        const blob = await (await proxyFetch(p.url)).blob();
+        if (blob.type.startsWith('image/')) d.photos[i] = { id: await storePhoto(blob) };
+      } catch {}
+    }
+  }
+  const now = Date.now();
+  const rec = { ...d, id: d.id || uid(), createdAt: d.createdAt || now, updatedAt: now, addedBy: d.addedBy || me() };
+  await db.put('recipes', rec);
+  await loadRecipes();
+  DRAFT = null;
+  ADD_REFS = [];
+  toast('保存しました');
+  location.hash = '#/r/' + rec.id;
+}
+
+/* ---------- 買い物リスト ---------- */
+const readJson = (k, d) => { try { return JSON.parse(ls.get(k)) ?? d; } catch { return d; } };
+const cart = () => readJson('cart', []).filter(c => findRecipe(c.id));
+const saveCart = c => { ls.set('cart', JSON.stringify(c)); renderTabs(); };
+function cartLabel(id) {
+  const c = cart().find(x => x.id === id);
+  return c ? `買い物リストに入っています（${c.n}${findRecipe(id).servingsUnit || '人分'}）` : '買い物リストに入れる';
+}
+const PANTRY = /^(塩|しお|こしょう|コショウ|胡椒|塩こしょう|塩コショウ|黒こしょう|粗びき黒こしょう|砂糖|上白糖|きび砂糖|しょうゆ|醤油|しょう油|濃口しょうゆ|薄口しょうゆ|みりん|本みりん|酒|料理酒|日本酒|酢|米酢|穀物酢|油|サラダ油|ごま油|オリーブオイル|米油|味噌|みそ|合わせ味噌|片栗粉|薄力粉|小麦粉|パン粉|顆粒だし|和風だし|和風顆粒だし|だしの素|ほんだし|鶏がらスープの素|顆粒鶏がらスープの素|コンソメ|顆粒コンソメ|めんつゆ|白だし|ケチャップ|トマトケチャップ|マヨネーズ|ソース|ウスターソース|中濃ソース|オイスターソース|ポン酢|バター|はちみつ|白ごま|いりごま|白いりごま|すりごま|一味唐辛子|七味唐辛子|カレー粉|豆板醤|コチュジャン|からし|和がらし|わさび|チューブにんにく|おろしにんにく|おろししょうが|チューブしょうが)$/;
+const NOT_BUY = /^(水|お湯|湯|熱湯|ぬるま湯|氷|水溶き片栗粉|揚げ油)$/;
+const shopKey = name => normalize(name).replace(/\(.*?\)/g, '').replace(/\s+/g, '').trim();
+
+function shopItems() {
+  const map = new Map();
+  for (const c of cart()) {
+    const r = findRecipe(c.id);
+    const k = c.n / (r.servings || 2);
+    for (const g of r.ingredients || []) {
+      if (g.header || !g.name) continue;
+      const key = shopKey(g.name);
+      if (!key || NOT_BUY.test(key)) continue;
+      if (!map.has(key)) map.set(key, { key, name: g.name.replace(/\(.*?\)/g, '').trim(), units: new Map(), from: new Set(), pantry: PANTRY.test(key) });
+      const it = map.get(key);
+      it.from.add(r.title);
+      if (g.amount != null) {
+        const v = (g.amount2 ?? g.amount) * k;
+        it.units.set(g.unit || '', (it.units.get(g.unit || '') || 0) + v);
+      }
+    }
+  }
+  return [...map.values()].map(it => {
+    it.qty = [...it.units].map(([u, v]) => qtyText({ amount: v, unit: u })).join('＋');
+    if (!it.qty) it.pantry = true;
+    return it;
+  });
+}
+const shopSel = () => readJson('shopSel', {});
+const isPicked = it => shopSel()[it.key] ?? !it.pantry;
+function shopText() {
+  return shopItems().filter(isPicked).sort((a, b) => a.pantry - b.pantry).map(it => (it.qty ? `${it.name} ${it.qty}` : it.name)).join('\n');
+}
+function shopRow(it) {
+  return `<li><label><input type="checkbox" data-shop="${esc(it.key)}" ${isPicked(it) ? 'checked' : ''}>
+    <span class="nm">${esc(it.name)}<small>${esc([...it.from].join('・'))}</small></span><span class="q">${esc(it.qty)}</span></label></li>`;
+}
+function viewShop() {
+  const c = cart();
+  if (!c.length) return `<header class="top"><h1>買い物リスト</h1></header>
+    <div class="empty"><div class="ico">${ICON.cart}</div><p><b>作りたい料理を選びましょう</b><br>レシピ画面の「買い物リストに入れる」を押すと、材料がここにまとまります。</p>
+    <p><a href="#/"><button>レシピを選ぶ</button></a></p></div>`;
+  const items = shopItems();
+  const buy = items.filter(it => !it.pantry), home = items.filter(it => it.pantry);
+  return `
+  <header class="top"><h1>買い物リスト</h1><button class="ghost small" data-act="shop-clear">空にする</button></header>
+  <section style="margin-top:4px"><h2>作る料理</h2>
+    ${c.map(x => { const r = findRecipe(x.id); return `<div class="row-between shop-r"><a href="#/r/${r.id}">${esc(r.title)}</a>
+      <div class="row" style="gap:4px"><div class="stepper"><button data-act="cart-n" data-id="${r.id}" data-d="-1" aria-label="減らす">−</button><span>${x.n}${esc(r.servingsUnit || '人分')}</span><button data-act="cart-n" data-id="${r.id}" data-d="1" aria-label="増やす">＋</button></div>
+      <button class="xbtn" data-act="cart-rm" data-id="${r.id}" aria-label="外す">${ICON.x}</button></div></div>`; }).join('')}
+  </section>
+  <section><h2>買うもの</h2>
+    <p class="hint" style="margin:-6px 0 6px">チェックが付いているものをKeepに送ります。同じ材料はまとめて合計しています。</p>
+    <ul class="shop">${buy.map(shopRow).join('') || '<li class="muted">なし</li>'}</ul>
+    ${home.length ? `<details style="margin-top:12px" ${home.some(isPicked) ? 'open' : ''}><summary>家にありそうな調味料など（${home.length}）</summary>
+      <p class="hint">切らしているものだけチェックしてください。</p><ul class="shop">${home.map(shopRow).join('')}</ul></details>` : ''}
+  </section>
+  <div class="savebar">
+    <button class="primary big" data-act="shop-copy">${ICON.copy}コピーしてGoogle Keepを開く</button>
+    ${navigator.share ? `<button class="big" data-act="shop-share" style="margin-top:8px">${ICON.share}共有メニューからKeepに送る</button>` : ''}
+  </div>
+  <details class="card"><summary>Google Keepでチェックリストにする方法</summary>
+    <ol><li>「コピーしてGoogle Keepを開く」を押す</li>
+    <li>Keepで右下の「＋」→「リスト」（チェックボックスのメモ）を選ぶ</li>
+    <li>1つ目の項目を長押しして「ペースト」。1行ずつ別の項目になります</li></ol>
+    <p class="hint">「共有メニュー」から送ると普通のメモとして入ります。その場合はメモの「︙」→「チェックボックスを表示」でリストに変わります。</p></details>`;
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); return true; } catch {}
+  const ta = document.createElement('textarea');
+  ta.value = t;
+  ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  const ok = document.execCommand('copy');
+  ta.remove();
+  return ok;
+}
+
+/* ---------- 設定 ---------- */
+function viewSettings() {
+  return `
+  <header class="top"><h1>設定</h1></header>
+  <div class="card"><h2>このスマホを使う人</h2>
+    <p class="hint" style="margin:0 0 8px">追加したレシピや「作った！」の記録に表示されます。</p>
+    <div class="row">${PEOPLE.map(p => `<button class="chip ${me() === p ? 'on' : ''}" data-act="set-me" data-name="${p}" style="flex:1;padding:9px">${p}</button>`).join('')}</div></div>
+  <div class="card"><h2>アプリの名前</h2>
+    <div class="row"><input id="title-input" value="${esc(appTitle())}"><button data-act="save-title">保存</button></div></div>
+  <div class="card"><h2>家族と共有</h2>
+    <p class="hint" style="margin:0">家族のスマホとレシピを同期する機能は、次の段階で設定できるようになります。今はこのスマホの中だけに保存されています。</p></div>
+  <div class="card"><h2>バックアップ</h2>
+    <p class="hint" style="margin:0 0 10px">レシピ ${RECIPES.length}件。写真ごと1つのファイルに書き出せます。機種変更のときにも使えます。</p>
+    <div class="row"><button data-act="export">書き出す</button><button data-act="import">読み込む</button></div></div>
+  <details class="card"><summary>詳しい設定</summary>
+    <label class="lbl" for="proxy-input">リンク読み取りサーバーのURL</label>
+    <div class="row"><input id="proxy-input" value="${esc(ls.get('proxyUrl'))}" placeholder="未設定（ローカル確認時は自動）"><button data-act="save-proxy">保存</button></div></details>
+  <p class="muted" style="text-align:center">版 ${VERSION}</p>`;
+}
+const blobToDataUrl = b => new Promise(res => { const f = new FileReader(); f.onload = () => res(f.result); f.readAsDataURL(b); });
+async function exportAll() {
+  const recipes = await db.all('recipes');
+  const photos = [];
+  for (const p of await db.all('photos')) photos.push({ id: p.id, createdAt: p.createdAt, data: await blobToDataUrl(p.blob) });
+  const blob = new Blob([JSON.stringify({ app: 'family-recipes', version: 1, exportedAt: Date.now(), recipes, photos })], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `recipes-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+async function importAll(file) {
+  let data;
+  try { data = JSON.parse(await file.text()); } catch { data = null; }
+  if (!data || data.app !== 'family-recipes') { toast('このファイルは読み込めませんでした。'); return; }
+  for (const p of data.photos || []) {
+    if (!(await db.get('photos', p.id))) await db.put('photos', { id: p.id, createdAt: p.createdAt || Date.now(), blob: await (await fetch(p.data)).blob() });
+  }
+  let n = 0;
+  for (const r of data.recipes || []) {
+    const cur = await db.get('recipes', r.id);
+    if (!cur || (cur.updatedAt || 0) < (r.updatedAt || 0)) { await db.put('recipes', r); n++; }
+  }
+  await loadRecipes();
+  toast(`${n}件を読み込みました`);
+  rerender();
+}
+
+/* ---------- お試しレシピ ---------- */
+async function addSample() {
+  const r = newDraft({
+    id: uid(), title: '鶏の照り焼き（お試し）', servings: 2, time: 20, tags: ['主菜', 'お弁当'],
+    addedBy: me() || 'お試し', createdAt: Date.now(), updatedAt: Date.now(),
+    ingredients: [
+      '鶏もも肉 1枚(300g)', '塩こしょう 少々', 'サラダ油 小さじ1', '【たれ】', '(A)しょうゆ 大さじ2', '(A)みりん 大さじ2', '(A)砂糖 小さじ2', '(A)酒 大さじ1',
+    ].map(parseIngredient),
+    steps: [
+      '鶏肉は余分な脂を取り、フォークで皮に数か所穴をあけて塩こしょうをふる。',
+      'フライパンに油をひき、皮目を下にして中火で5分焼く。',
+      '裏返して蓋をし、弱火で3〜4分蒸し焼きにする。',
+      'Aを加え、とろみがつくまで煮絡める。食べやすく切って盛り付ける。',
+    ].map(text => ({ text })),
+    memo: '皮目をしっかり焼くとパリッと仕上がります。',
+  });
+  await db.put('recipes', r);
+  await loadRecipes();
+  location.hash = '#/r/' + r.id;
+}
+
+/* ---------- 操作 ---------- */
+let COOKED_PHOTOS = [];
+function renderCookedThumbs() {
+  const el = $('#cooked-thumbs');
+  if (!el) return;
+  el.innerHTML = COOKED_PHOTOS.map((id, i) => `<div class="t"><img data-photo="${esc(id)}" alt=""><button data-act="cooked-photo-rm" data-i="${i}" aria-label="削除">${ICON.x}</button></div>`).join('')
+    + `<button class="thumb-add" data-act="cooked-photo">${ICON.camera}撮る・選ぶ</button>`;
+  hydratePhotos();
+}
+
+const ACTIONS = {
+  'cart-toggle'(el) {
+    const id = el.dataset.id, r = findRecipe(id);
+    let c = cart();
+    const n = SERV[id] ?? r.servings ?? 2;
+    const cur = c.find(x => x.id === id);
+    if (cur && cur.n === n) { c = c.filter(x => x.id !== id); toast('買い物リストから外しました'); }
+    else if (cur) { cur.n = n; toast(`${n}${r.servingsUnit || '人分'}に変えました`); }
+    else { c.push({ id, n }); toast('買い物リストに入れました'); }
+    saveCart(c);
+    $('#cart-label').textContent = cartLabel(id);
+  },
+  'cart-n'(el) {
+    const c = cart(), x = c.find(y => y.id === el.dataset.id);
+    x.n = Math.max(1, Math.min(30, x.n + +el.dataset.d));
+    saveCart(c); rerender();
+  },
+  'cart-rm'(el) { saveCart(cart().filter(x => x.id !== el.dataset.id)); rerender(); },
+  'shop-clear'() { if (!confirm('買い物リストを空にしますか？')) return; saveCart([]); ls.set('shopSel', '{}'); rerender(); },
+  async 'shop-copy'() {
+    const t = shopText();
+    if (!t) { toast('チェックが付いている材料がありません。'); return; }
+    if (!(await copyText(t))) { toast('コピーできませんでした。'); return; }
+    toast(`${t.split('\n').length}品をコピーしました。Keepのリストに貼り付けてください。`, 4000);
+    window.open('https://keep.google.com/', '_blank');
+  },
+  async 'shop-share'() {
+    const t = shopText();
+    if (!t) { toast('チェックが付いている材料がありません。'); return; }
+    try { await navigator.share({ title: '買い物リスト', text: t }); } catch {}
+  },
+  'set-me'(el) { ls.set('me', el.dataset.name); toast(`${el.dataset.name}にしました`); rerender(); },
+  'set-by'(el) { DRAFT.addedBy = el.dataset.name; $$('[data-act="set-by"]').forEach(b => b.classList.toggle('on', b === el)); },
+  'save-title'() { ls.set('appTitle', $('#title-input').value.trim()); toast('保存しました'); },
+  'save-proxy'() { ls.set('proxyUrl', $('#proxy-input').value.trim()); toast('保存しました'); },
+  tag(el) { HOME.tag = el.dataset.tag; $$('.chips .chip').forEach(c => c.classList.toggle('on', c.dataset.tag === HOME.tag)); renderGrid(); },
+  sample: addSample,
+  async fav(el) {
+    const r = findRecipe(el.dataset.id);
+    r.fav = !r.fav;
+    r.updatedAt = Date.now();
+    await db.put('recipes', r);
+    el.innerHTML = r.fav ? ICON.heartOn : ICON.heart;
+    toast(r.fav ? 'お気に入りに追加しました' : 'お気に入りから外しました');
+  },
+  serv(el) {
+    const id = location.hash.split('/')[2];
+    const r = findRecipe(id);
+    const base = r.servings || 2;
+    SERV[id] = Math.max(1, Math.min(30, (SERV[id] ?? base) + +el.dataset.d));
+    renderIngs(r);
+  },
+  timer(el) { startTimer(+el.dataset.sec, el.dataset.label); },
+  'timer-stop'(el) { const i = TIMERS.findIndex(t => t.id === el.dataset.id); if (i >= 0) TIMERS.splice(i, 1); renderTimers(); },
+  cook(el) { unlockAudio(); COOK = null; location.hash = '#/cook/' + el.dataset.id; },
+  'cook-step'(el) { moveCook(+el.dataset.d); },
+  'cook-ings'() { COOK.showIngs = !COOK.showIngs; renderCook(); },
+  got(el) { const j = +el.dataset.j; COOK.got.has(j) ? COOK.got.delete(j) : COOK.got.add(j); el.classList.toggle('got'); },
+  'cook-done'(el) { location.hash = '#/r/' + el.dataset.id; setTimeout(() => ACTIONS['cooked-open'](), 50); },
+  'cooked-open'() { const f = $('#cooked-form'); if (f) { COOKED_PHOTOS = []; renderCookedThumbs(); f.hidden = false; $('#cooked-note').focus(); } },
+  'cooked-close'() { $('#cooked-form').hidden = true; COOKED_PHOTOS = []; },
+  async 'cooked-photo'() { const files = await pickFiles(true); for (const f of files) COOKED_PHOTOS.push(await storePhoto(f)); renderCookedThumbs(); },
+  'cooked-photo-rm'(el) { COOKED_PHOTOS.splice(+el.dataset.i, 1); renderCookedThumbs(); },
+  'cover'(el) { const i = +el.dataset.i; DRAFT.photos.unshift(...DRAFT.photos.splice(i, 1)); rerender(); toast('表紙にしました'); },
+  async 'cooked-save'(el) {
+    const r = findRecipe(el.dataset.id);
+    const photos = COOKED_PHOTOS.map(id => ({ id }));
+    r.cooked = [...(r.cooked || []), { at: Date.now(), by: me(), note: $('#cooked-note').value.trim(), photos }];
+    if (photos.length && $('#cooked-cover').checked) r.photos = [photos[0], ...(r.photos || [])];
+    COOKED_PHOTOS = [];
+    r.updatedAt = Date.now();
+    await db.put('recipes', r);
+    toast('記録しました');
+    rerender();
+  },
+  async delete(el) {
+    const r = findRecipe(el.dataset.id);
+    if (!confirm(`「${r.title}」を削除しますか？`)) return;
+    r.deleted = true;
+    r.updatedAt = Date.now();
+    await db.put('recipes', r);
+    await loadRecipes();
+    toast('削除しました');
+    location.hash = '#/';
+  },
+  async 'view-photo'(el) {
+    const v = $('#viewer');
+    v.querySelector('img').src = el.dataset.srcId ? await photoUrl(el.dataset.srcId) : el.dataset.srcUrl;
+    v.querySelector('button').innerHTML = ICON.x;
+    v.classList.add('show');
+  },
+  'close-viewer'() { $('#viewer').classList.remove('show'); },
+
+  'import-url': importUrl,
+  'import-text'() {
+    const t = $('#paste').value;
+    if (!t.trim()) { $('#paste-err').textContent = '文字を貼り付けてください。'; return; }
+    DRAFT = newDraft({ source: { type: 'text' }, refImages: ADD_REFS.map(id => ({ id })) });
+    if (!applyParsed(DRAFT, t)) toast('材料と作り方をうまく見分けられませんでした。下で直してください。', 4000);
+    location.hash = '#/edit/new';
+  },
+  async 'add-ref'() {
+    const files = await pickFiles(true);
+    for (const f of files) ADD_REFS.push(await storePhoto(f, 2000));
+    const t = $('#paste')?.value;
+    rerender();
+    if (t) $('#paste').value = t;
+  },
+  'add-ref-rm'(el) { const t = $('#paste')?.value; ADD_REFS.splice(+el.dataset.i, 1); rerender(); if (t) $('#paste').value = t; },
+  'new-manual'() { DRAFT = newDraft(); location.hash = '#/edit/new'; },
+  async 'new-handwritten'() {
+    const files = await pickFiles(true);
+    if (!files.length) return;
+    const refs = [];
+    for (const f of files) refs.push({ id: await storePhoto(f, 2000) });
+    DRAFT = newDraft({ source: { type: 'handwritten' }, refImages: refs });
+    location.hash = '#/edit/new';
+  },
+
+  'cancel-edit'() {
+    if (!confirm('保存せずに戻りますか？')) return;
+    const id = DRAFT?.id;
+    DRAFT = null;
+    location.hash = id ? '#/r/' + id : '#/add';
+  },
+  'edit-parse'() {
+    const t = $('#edit-paste').value;
+    if (!t.trim()) { $('#edit-paste-err').textContent = '文字を貼り付けてください。'; return; }
+    if (!applyParsed(DRAFT, t)) { $('#edit-paste-err').textContent = '材料と作り方を見分けられませんでした。「材料」「作り方」の見出しを入れると読み取りやすくなります。'; return; }
+    rerender();
+    toast('振り分けました。違うところを直してください。');
+  },
+  async 'add-photo'() { const files = await pickFiles(true); for (const f of files) DRAFT.photos.push({ id: await storePhoto(f) }); rerender(); },
+  'rm-photo'(el) { DRAFT.photos.splice(+el.dataset.i, 1); rerender(); },
+  async 'add-ref-edit'() { const files = await pickFiles(true); for (const f of files) DRAFT.refImages.push({ id: await storePhoto(f, 2000) }); rerender(); },
+  'rm-ref'(el, e) { e.stopPropagation(); DRAFT.refImages.splice(+el.dataset.i, 1); rerender(); },
+  'tog-tag'(el) { const t = el.dataset.tag; DRAFT.tags = DRAFT.tags.includes(t) ? DRAFT.tags.filter(x => x !== t) : [...DRAFT.tags, t]; el.classList.toggle('on'); },
+  'add-tag'() { const v = $('#newtag').value.trim(); if (v && !DRAFT.tags.includes(v)) DRAFT.tags.push(v); rerender(); },
+  'add-ing'() { DRAFT.ingredients.push({ name: '', amount: null, amount2: null, unit: '', note: '', group: '' }); rerender(); $$('[data-ing][data-k="name"]').pop()?.focus(); },
+  'add-head'() { DRAFT.ingredients.push({ header: true, name: '' }); rerender(); $$('[data-ing][data-k="name"]').pop()?.focus(); },
+  'rm-ing'(el) { DRAFT.ingredients.splice(+el.dataset.i, 1); rerender(); },
+  'rm-note'(el) { DRAFT.ingredients[+el.dataset.i].note = ''; rerender(); },
+  'add-step'() { DRAFT.steps.push({ text: '' }); rerender(); $$('[data-step]').pop()?.focus(); },
+  'rm-step'(el) { DRAFT.steps.splice(+el.dataset.i, 1); rerender(); },
+  'mv-step'(el) {
+    const i = +el.dataset.i, j = i + +el.dataset.d;
+    if (j < 0 || j >= DRAFT.steps.length) return;
+    [DRAFT.steps[i], DRAFT.steps[j]] = [DRAFT.steps[j], DRAFT.steps[i]];
+    rerender();
+  },
+  async 'step-photo'(el) { const i = +el.dataset.i; const [f] = await pickFiles(false); if (!f) return; DRAFT.steps[i].photo = { id: await storePhoto(f) }; rerender(); },
+  'rm-step-photo'(el) { delete DRAFT.steps[+el.dataset.i].photo; rerender(); },
+  save: saveDraft,
+
+  export: exportAll,
+  async import() { const i = document.createElement('input'); i.type = 'file'; i.accept = 'application/json,.json'; i.onchange = () => i.files[0] && importAll(i.files[0]); i.click(); },
+};
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const fn = ACTIONS[el.dataset.act];
+  if (!fn) return;
+  e.preventDefault();
+  fn(el, e);
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.id === 'q') { HOME.q = t.value; renderGrid(); return; }
+  if (!DRAFT || VIEW !== 'edit') return;
+  if (t.dataset.f) {
+    const f = t.dataset.f;
+    DRAFT[f] = ['servings', 'time'].includes(f) ? (t.value === '' ? null : +t.value) : t.value;
+    if (f === 'title') $('#err-title').textContent = '';
+  } else if (t.dataset.ing != null) {
+    const g = DRAFT.ingredients[+t.dataset.ing];
+    if (t.dataset.k === 'amt') g._amt = t.value;
+    else if (t.dataset.k === 'name' && !g.header) { g.name = t.value; g.group = ''; }
+    else g[t.dataset.k] = t.value;
+  } else if (t.dataset.step != null) {
+    DRAFT.steps[+t.dataset.step].text = t.value;
+  } else if (t.id === 'edit-paste') {
+    $('#edit-paste-err').textContent = '';
+  }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'url') $('#url-err').textContent = '';
+  if (e.target.id === 'paste') $('#paste-err').textContent = '';
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'sort') { HOME.sort = e.target.value; renderGrid(); }
+  if (e.target.dataset.shop) { const s = shopSel(); s[e.target.dataset.shop] = e.target.checked; ls.set('shopSel', JSON.stringify(s)); }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') $('#viewer').classList.remove('show');
+  if (e.key === 'Enter' && e.target.id === 'newtag') { e.preventDefault(); ACTIONS['add-tag'](); }
+  if (e.key === 'Enter' && e.target.id === 'url') { e.preventDefault(); importUrl(); }
+});
+window.addEventListener('hashchange', route);
+
+(async () => {
+  try { await navigator.storage?.persist?.(); } catch {}
+  await loadRecipes();
+  route();
+  gcPhotos().catch(() => {});
+})();
+</script>
+</body>
+</html>
