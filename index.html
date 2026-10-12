@@ -75,6 +75,13 @@ section{margin:22px 0}
 .hero img{width:100%;height:100%;object-fit:cover}
 .hero.noimg{aspect-ratio:auto;height:96px}
 @media (min-width:680px){.hero{margin:0 0 14px;border-radius:var(--r)}}
+.hero.yt{aspect-ratio:16/9;cursor:pointer}
+.hero.playing{background:#000}
+.hero iframe,.cook-video iframe{width:100%;height:100%;border:0;display:block}
+.hero .play{position:absolute;width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:flex;align-items:center;justify-content:center}
+.hero .play svg{width:30px;height:30px}
+.cook-video{aspect-ratio:16/9;margin:calc(-8px - env(safe-area-inset-top)) -16px 0;background:#000;position:sticky;top:0;z-index:5}
+.cook-video:not([hidden])+.cook{min-height:calc(100dvh - min(56.25vw, 382px) + env(safe-area-inset-top))}
 .hero .more{position:absolute;right:10px;bottom:10px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:2px 8px;border-radius:999px}
 .meta{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--sub);margin:6px 0 10px}
 .meta span,.meta a{display:inline-flex;align-items:center;gap:4px}
@@ -178,7 +185,7 @@ body.cooking #timers{bottom:calc(env(safe-area-inset-bottom) + 86px)}
 
 <script>
 'use strict';
-const VERSION = '0.4.3';
+const VERSION = '0.5.0';
 
 /* ---------- 小物 ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -216,6 +223,8 @@ const ICON = {
   text: svg('<path d="M5 5h14M5 10h14M5 15h9M5 20h6"/>'),
   up: svg('<path d="M6 15l6-6 6 6"/>'),
   down: svg('<path d="M6 9l6 6 6-6"/>'),
+  video: svg('<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/>'),
+  play: svg('<path d="M8 5v14l11-7z"/>', 'currentColor'),
   bowl: svg('<path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 7c0-1 1-1 1-2M12 7c0-1 1-1 1-2M16 7c0-1 1-1 1-2"/>'),
   cart: svg('<path d="M3 4h2l2.4 11h10.2L20 8H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/>'),
   copy: svg('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>'),
@@ -862,6 +871,8 @@ function applyDescription(d, text, dropIntro, fallbackMemo) {
 
 // YouTubeはSupabaseからページを開くと概要欄が入っていないことがあるため、
 // 中継役に動画の情報（タイトル・概要欄・サムネイル）だけを取ってきてもらう
+const videoOf = r => r.videoUrl || (r.source?.site === 'YouTube' ? r.source.url : '');
+const ytEmbed = (id, extra = '') => `<iframe src="https://www.youtube-nocookie.com/embed/${id}?playsinline=1&rel=0${extra}" title="動画" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
 const ytId = url => url.match(/(?:youtu\.be\/|[?&]v=|\/(?:shorts|live|embed)\/)([\w-]{11})/)?.[1];
 async function importYouTube(url) {
   const id = ytId(url);
@@ -1049,16 +1060,19 @@ function viewDetail(r) {
   const n = SERV[r.id] ?? r.servings ?? 2;
   const empty = !(r.ingredients || []).length && !(r.steps || []).length;
   const src = r.source || {};
+  const video = videoOf(r), vid = ytId(video || '');
   return `
   <header class="top"><a class="icon-btn" href="#/" aria-label="戻る">${ICON.back}</a>
     <span class="row" style="gap:0">
       <button class="icon-btn" data-act="fav" data-id="${r.id}" aria-label="お気に入り" style="color:var(--accent)">${r.fav ? ICON.heartOn : ICON.heart}</button>
       <a class="icon-btn" href="#/edit/${r.id}" aria-label="編集">${ICON.edit}</a></span></header>
-  <div class="hero ${hero ? '' : 'noimg'}" ${hero ? `data-act="view-photo" data-src-id="${esc(hero.id || '')}" data-src-url="${esc(hero.url || '')}"` : ''}>${hero ? imgTag(hero, r.photos?.length ? '' : 'style="object-position:top"') : ICON.bowl}
-    ${(r.photos?.length || 0) > 1 ? `<span class="more">${r.photos.length}枚</span>` : ''}</div>
+  ${vid ? `<div class="hero yt" data-act="play-video" data-vid="${vid}" aria-label="動画を再生">${hero ? imgTag(hero) : `<img src="https://i.ytimg.com/vi/${vid}/hqdefault.jpg" alt="">`}<span class="play">${ICON.play}</span></div>`
+  : `<div class="hero ${hero ? '' : 'noimg'}" ${hero ? `data-act="view-photo" data-src-id="${esc(hero.id || '')}" data-src-url="${esc(hero.url || '')}"` : ''}>${hero ? imgTag(hero, r.photos?.length ? '' : 'style="object-position:top"') : ICON.bowl}
+    ${(r.photos?.length || 0) > 1 ? `<span class="more">${r.photos.length}枚</span>` : ''}</div>`}
   <h1>${esc(r.title)}</h1>
   <div class="meta">
-    ${src.url ? `<a href="${esc(src.url)}" target="_blank" rel="noopener">${ICON.link}${esc(src.site || '元のページ')}</a>` : ''}
+    ${src.url ? `<a href="${esc(src.url)}" target="_blank" rel="noopener">${ICON.link}${src.site === 'YouTube' ? 'YouTubeで開く' : esc(src.site || '元のページ')}</a>` : ''}
+    ${video && video !== src.url ? `<a href="${esc(video)}" target="_blank" rel="noopener">${ICON.video}動画を見る</a>` : ''}
     ${r.time ? `<span>${ICON.clock}${r.time}分</span>` : ''}
     ${r.addedBy ? `<span>${ICON.user}${esc(r.addedBy)}が追加</span>` : ''}
     ${r.cooked?.length ? `<span>${ICON.check}${r.cooked.length}回作った</span>` : ''}
@@ -1120,7 +1134,7 @@ function renderIngs(r) {
 /* ---------- 調理モード ---------- */
 function viewCook(r) {
   if (!COOK || COOK.id !== r.id) COOK = { id: r.id, i: 0, got: new Set(), showIngs: false };
-  return `<div class="cook" id="cook"></div>`;
+  return `<div id="cook-video" class="cook-video" hidden></div><div class="cook" id="cook"></div>`;
 }
 function renderCook() {
   const r = findRecipe(COOK.id);
@@ -1134,7 +1148,8 @@ function renderCook() {
   el.innerHTML = `
     <header class="top"><a class="icon-btn" href="#/r/${r.id}" aria-label="調理モードを終わる">${ICON.x}</a>
       <span class="t-sm" style="font-size:15px">${COOK.showIngs ? '材料' : `手順 ${i + 1} / ${steps.length}`}</span>
-      <button class="icon-btn" data-act="cook-ings" aria-label="材料を表示" style="${COOK.showIngs ? 'color:var(--accent)' : ''}">${ICON.list}</button></header>
+      <span class="row" style="gap:0">${ytId(videoOf(r) || '') ? `<button class="icon-btn" data-act="cook-video" aria-label="動画を表示" style="${$('#cook-video')?.hidden === false ? 'color:var(--accent)' : ''}">${ICON.video}</button>` : ''}
+      <button class="icon-btn" data-act="cook-ings" aria-label="材料を表示" style="${COOK.showIngs ? 'color:var(--accent)' : ''}">${ICON.list}</button></span></header>
     <div class="bar"><div style="width:${((i + 1) / steps.length) * 100}%"></div></div>
     <div class="body">
     ${COOK.showIngs
@@ -1297,6 +1312,10 @@ function viewEdit() {
 
   <p class="lbl">追加した人</p>
   <div class="row">${PEOPLE.map(p => `<button class="chip ${(d.addedBy || me()) === p ? 'on' : ''}" data-act="set-by" data-name="${p}" style="flex:1;padding:8px">${p}</button>`).join('')}</div>
+
+  <label class="lbl" for="f-video">動画のリンク（任意）</label>
+  <input id="f-video" data-f="videoUrl" type="url" inputmode="url" value="${esc(d.videoUrl || '')}" placeholder="${d.source?.site === 'YouTube' ? '読み取ったYouTube動画を使います' : 'https://youtu.be/...'}">
+  <p class="hint" style="margin-top:4px">YouTubeならアプリの中で再生できます。ほかの動画はリンクとして開きます。</p>
 
   <p class="lbl">料理の写真（1枚目が表紙）</p>
   <div class="thumbs">${d.photos.map((p, i) => `<div class="t">${imgTag(p)}<button data-act="rm-photo" data-i="${i}" aria-label="削除">${ICON.x}</button>${i ? `<span class="cover-btn" data-act="cover" data-i="${i}">表紙にする</span>` : '<span class="cover-btn on">表紙</span>'}</div>`).join('')}
@@ -1695,6 +1714,17 @@ const ACTIONS = {
     v.querySelector('img').src = el.dataset.srcId ? await photoUrl(el.dataset.srcId) : el.dataset.srcUrl;
     v.querySelector('button').innerHTML = ICON.x;
     v.classList.add('show');
+  },
+  'play-video'(el) {
+    el.classList.add('playing');
+    el.removeAttribute('data-act');
+    el.innerHTML = ytEmbed(el.dataset.vid, '&autoplay=1');
+  },
+  'cook-video'(el) {
+    const box = $('#cook-video');
+    box.hidden = !box.hidden;
+    if (!box.hidden && !box.innerHTML) box.innerHTML = ytEmbed(ytId(videoOf(findRecipe(COOK.id))));
+    el.style.color = box.hidden ? '' : 'var(--accent)';
   },
   'close-viewer'() { $('#viewer').classList.remove('show'); },
 
