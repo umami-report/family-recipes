@@ -178,7 +178,7 @@ body.cooking #timers{bottom:calc(env(safe-area-inset-bottom) + 86px)}
 
 <script>
 'use strict';
-const VERSION = '0.3.2';
+const VERSION = '0.3.3';
 
 /* ---------- 小物 ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1244,15 +1244,22 @@ function viewShop() {
       <p class="hint">切らしているものだけチェックしてください。</p><ul class="shop">${home.map(shopRow).join('')}</ul></details>` : ''}
   </section>
   <div class="savebar">
-    ${navigator.share ? `<button class="primary big" data-act="shop-share">${ICON.share}Google Keepに送る</button>` : ''}
-    <button class="big ${navigator.share ? '' : 'primary'}" data-act="shop-copy" style="margin-top:8px">${ICON.copy}コピーしてGoogle Keepを開く</button>
+    <button class="primary big" data-act="shop-copy">${ICON.copy}コピーしてKeep（Web版）を開く</button>
   </div>
-  <div class="card"><h2 style="font-size:15px">Keepでチェックリストにするには</h2>
+  <div class="card"><h2 style="font-size:15px">Keepの共有リストに入れるには</h2>
     <ol style="padding-left:20px;margin:6px 0;font-size:14px;color:var(--sub)">
-    <li>「Google Keepに送る」→ 共有メニューで「Keep」を選んで保存（コピーした場合は、Keepの<b>普通のメモ</b>に貼り付け）</li>
-    <li>Keepでそのメモを開き、左下の「＋」（または右上の「︙」）→「<b>チェックボックスを表示</b>」</li>
-    <li>1行ずつチェック項目に分かれます</li></ol>
-    <p class="hint">Keepの「リスト」に直接貼り付けると、1つの項目にまとまってしまいます。</p></div>`;
+    <li>上のボタンを押すと、買うものがコピーされてSafariでWeb版のKeepが開きます</li>
+    <li>${keepUrl() ? 'いつものリスト' : '入れたいリスト'}を開き、新しい項目の欄を長押しして「ペースト」</li>
+    <li>1行ずつ別の項目になります。Keepアプリにもそのまま同期されます</li></ol>
+    ${keepUrl() ? '' : '<p class="hint">設定でいつものリストのURLを登録すると、そのリストが直接開きます。</p>'}
+    ${navigator.share ? '<button class="small ghost" data-act="shop-share" style="margin-top:6px;padding-left:0">新しいメモとしてKeepアプリに送る</button>' : ''}</div>`;
+}
+const keepUrl = () => ls.get('keepUrl');
+function openKeepWeb() {
+  const url = keepUrl() || 'https://keep.google.com/';
+  // iPhoneでは普通に開くとKeepアプリに飛ぶため、x-safari- を付けてSafariで開く
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent)) location.href = 'x-safari-' + url;
+  else window.open(url, '_blank');
 }
 async function copyText(t) {
   try { await navigator.clipboard.writeText(t); return true; } catch {}
@@ -1275,6 +1282,10 @@ function viewSettings() {
     <div class="row">${PEOPLE.map(p => `<button class="chip ${me() === p ? 'on' : ''}" data-act="set-me" data-name="${p}" style="flex:1;padding:9px">${p}</button>`).join('')}</div></div>
   <div class="card"><h2>アプリの名前</h2>
     <div class="row"><input id="title-input" value="${esc(appTitle())}"><button data-act="save-title">保存</button></div></div>
+  <div class="card"><h2>Google Keepのリスト</h2>
+    <p class="hint" style="margin:0 0 8px">買い物リストを入れるKeepのリストのURLです。Web版Keep（keep.google.com）でそのリストを開いたときのアドレスを貼り付けます。</p>
+    <div class="row"><input id="keep-input" type="url" value="${esc(keepUrl())}" placeholder="https://keep.google.com/#LIST/..."><button data-act="save-keep">保存</button></div>
+    <p class="err" id="keep-err"></p></div>
   <div class="card"><h2>家族と共有</h2>
     <p class="hint" style="margin:0">家族のスマホとレシピを同期する機能は、次の段階で設定できるようになります。今はこのスマホの中だけに保存されています。</p></div>
   <div class="card"><h2>バックアップ</h2>
@@ -1369,7 +1380,7 @@ const ACTIONS = {
     if (!t) { toast('チェックが付いている材料がありません。'); return; }
     if (!(await copyText(t))) { toast('コピーできませんでした。'); return; }
     toast(`${t.split('\n').length}品をコピーしました。Keepのリストに貼り付けてください。`, 4000);
-    window.open('https://keep.google.com/', '_blank');
+    openKeepWeb();
   },
   async 'shop-share'() {
     const t = shopText();
@@ -1379,6 +1390,13 @@ const ACTIONS = {
   'set-me'(el) { ls.set('me', el.dataset.name); toast(`${el.dataset.name}にしました`); rerender(); },
   'set-by'(el) { DRAFT.addedBy = el.dataset.name; $$('[data-act="set-by"]').forEach(b => b.classList.toggle('on', b === el)); },
   'save-title'() { ls.set('appTitle', $('#title-input').value.trim()); toast('保存しました'); },
+  'save-keep'() {
+    const v = $('#keep-input').value.trim();
+    if (v && !/^https:\/\/keep\.google\.com\//.test(v)) { $('#keep-err').textContent = 'https://keep.google.com/ から始まるURLを貼り付けてください。'; return; }
+    $('#keep-err').textContent = '';
+    ls.set('keepUrl', v);
+    toast(v ? '保存しました' : 'リストの登録を外しました');
+  },
   'save-proxy'() { ls.set('proxyUrl', $('#proxy-input').value.trim()); toast('保存しました'); },
   tag(el) { HOME.tag = el.dataset.tag; $$('.chips .chip').forEach(c => c.classList.toggle('on', c.dataset.tag === HOME.tag)); renderGrid(); },
   sample: addSample,
