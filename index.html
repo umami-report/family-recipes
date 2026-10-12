@@ -178,7 +178,7 @@ body.cooking #timers{bottom:calc(env(safe-area-inset-bottom) + 86px)}
 
 <script>
 'use strict';
-const VERSION = '0.3.3';
+const VERSION = '0.4.0';
 
 /* ---------- 小物 ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -261,17 +261,166 @@ const db = {
 };
 
 let RECIPES = [];
+async function saveRecipe(r) {
+  await db.put('recipes', r);
+  scheduleSync();
+}
 async function loadRecipes() {
   RECIPES = (await db.all('recipes')).filter(r => !r.deleted);
 }
 const findRecipe = id => RECIPES.find(r => r.id === id);
 
+/* ---------- 家族と同期（Supabase） ---------- */
+const SB_URL = 'https://iweprevsbohxuzfwafqz.supabase.co';
+const SB_KEY = 'sb_publishable_h-1Cc7jRHOyUSFpTLTLDoA_PaKp54Em';
+const loggedIn = () => !!readJson('sbSession', null);
+async function sbAuth(body, grant) {
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=${grant}`, {
+    method: 'POST', headers: { apikey: SB_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(j.error_description || j.msg || 'auth failed'), { status: r.status });
+  const s = { access: j.access_token, refresh: j.refresh_token, exp: Date.now() + (j.expires_in || 3600) * 1000 };
+  ls.set('sbSession', JSON.stringify(s));
+  return s;
+}
+let _tokP = null;
+function sbToken() {
+  // 同時に何度も更新しないよう、更新処理は1つにまとめる
+  return _tokP || (_tokP = (async () => {
+    let s = readJson('sbSession', null);
+    if (!s) return null;
+    if (Date.now() > s.exp - 60e3) {
+      try { s = await sbAuth({ refresh_token: s.refresh }, 'refresh_token'); }
+      catch (e) { if (e.status === 400 || e.status === 401) ls.set('sbSession', ''); throw e; }
+    }
+    return s.access;
+  })().finally(() => { _tokP = null; }));
+}
+async function sb(path, opts = {}) {
+  const t = await sbToken();
+  if (!t) throw new Error('NOLOGIN');
+  const r = await fetch(SB_URL + path, { ...opts, headers: { apikey: SB_KEY, Authorization: 'Bearer ' + t, ...(opts.headers || {}) } });
+  if (!r.ok) throw Object.assign(new Error('HTTP ' + r.status), { status: r.status });
+  return r;
+}
+
+let syncing = null, syncAgain = false, syncTimer = null;
+let SYNC_STATE = { at: +ls.get('lastSyncAt') || 0, err: '' };
+function scheduleSync(ms = 1500) {
+  if (!loggedIn()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncNow, ms);
+}
+function syncNow() {
+  if (!loggedIn()) return Promise.resolve();
+  if (syncing) { syncAgain = true; return syncing; }
+  updateSyncStatus(true);
+  return syncing = doSync().finally(() => {
+    syncing = null;
+    updateSyncStatus();
+    if (syncAgain) { syncAgain = false; scheduleSync(300); }
+  });
+}
+async function doSync() {
+  try {
+    const changed = await pullRecipes();
+    await pushRecipes();
+    SYNC_STATE = { at: Date.now(), err: '' };
+    ls.set('lastSyncAt', String(SYNC_STATE.at));
+    if (changed) {
+      await loadRecipes();
+      if (['', 'fav', 'r', 'shop'].includes(VIEW)) rerender();
+    }
+  } catch (e) {
+    SYNC_STATE.err = e.message === 'NOLOGIN' || e.status === 401 ? 'ログインし直してください'
+      : navigator.onLine ? '同期できませんでした。少したってから自動でやり直します' : 'オフラインです。電波が戻ったら同期します';
+    if (!loggedIn() && VIEW === 'settings') rerender();
+  }
+}
+async function pullRecipes() {
+  // 端末の時計のずれに備えて、10分ぶん重ねて取り直す
+  let since = Math.max(0, (+ls.get('lastPull') || 0) - 600e3), changed = false;
+  for (;;) {
+    const rows = await (await sb(`/rest/v1/recipes?select=id,updated_at,deleted,data&updated_at=gt.${since}&order=updated_at.asc&limit=200`)).json();
+    for (const row of rows) {
+      const local = await db.get('recipes', row.id);
+      if (!local || (local.updatedAt || 0) < row.updated_at) {
+        await db.put('recipes', { ...row.data, id: row.id, updatedAt: row.updated_at, deleted: row.deleted, syncedAt: row.updated_at });
+        changed = true;
+      } else if (local.updatedAt === row.updated_at && local.syncedAt !== row.updated_at) {
+        await db.put('recipes', { ...local, syncedAt: row.updated_at });
+      }
+      since = Math.max(since, row.updated_at);
+    }
+    ls.set('lastPull', String(Math.max(since, +ls.get('lastPull') || 0)));
+    if (rows.length < 200) return changed;
+  }
+}
+async function pushRecipes() {
+  for (const r of await db.all('recipes')) {
+    if (r.syncedAt === r.updatedAt) continue;
+    for (const p of allPhotos(r)) if (p.id) await uploadPhoto(p.id);
+    const { syncedAt, ...data } = r;
+    await sb('/rest/v1/recipes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ id: r.id, updated_at: r.updatedAt, deleted: !!r.deleted, data }),
+    });
+    const cur = await db.get('recipes', r.id);
+    if (cur && cur.updatedAt === r.updatedAt) await db.put('recipes', { ...cur, syncedAt: r.updatedAt });
+  }
+}
+async function uploadPhoto(id) {
+  const p = await db.get('photos', id);
+  if (!p || p.uploaded) return;
+  try {
+    await sb(`/storage/v1/object/photos/${id}`, { method: 'POST', headers: { 'Content-Type': p.blob.type || 'image/jpeg', 'x-upsert': 'true' }, body: p.blob });
+  } catch (e) {
+    // 形式やサイズで受け付けられない写真は諦める（同期全体を止めないため）
+    if (![400, 413, 415].includes(e.status)) throw e;
+  }
+  await db.put('photos', { ...p, uploaded: true });
+}
+async function downloadPhoto(id) {
+  try {
+    const blob = await (await sb(`/storage/v1/object/authenticated/photos/${id}`)).blob();
+    const p = { id, blob, createdAt: Date.now(), uploaded: true };
+    await db.put('photos', p);
+    return p;
+  } catch { return null; }
+}
+function syncStatusText(busy = !!syncing) {
+  if (busy) return '同期しています…';
+  if (SYNC_STATE.err) return SYNC_STATE.err;
+  return SYNC_STATE.at
+    ? `最後に同期した時刻：${new Date(SYNC_STATE.at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+    : 'まだ同期していません';
+}
+function updateSyncStatus(busy) {
+  const el = $('#sync-status');
+  if (el) el.textContent = syncStatusText(busy);
+}
+function syncCard() {
+  if (!loggedIn()) return `<div class="card"><h2>家族と共有</h2>
+    <p class="hint" style="margin:0 0 8px">共有アカウントでログインすると、DanとMikiのスマホでレシピ・写真・作った記録が同じになります。このスマホのレシピもそのまま共有されます。</p>
+    <input id="sb-email" type="email" autocomplete="username" placeholder="メールアドレス" style="margin-bottom:6px">
+    <input id="sb-pass" type="password" autocomplete="current-password" placeholder="パスワード">
+    <p class="err" id="sb-err"></p>
+    <button class="primary" data-act="sb-login" style="margin-top:8px;width:100%">ログインして同期する</button></div>`;
+  return `<div class="card"><h2>家族と共有</h2>
+    <p class="hint" style="margin:0 0 10px" id="sync-status">${esc(syncStatusText())}</p>
+    <div class="row"><button data-act="sync-now">今すぐ同期</button><button class="ghost danger" data-act="sb-logout">ログアウト</button></div></div>`;
+}
+
 /* ---------- 写真 ---------- */
 const PHOTO_URLS = new Map();
 async function photoUrl(id) {
   if (PHOTO_URLS.has(id)) return PHOTO_URLS.get(id);
-  const p = await db.get('photos', id);
-  const u = p ? URL.createObjectURL(p.blob) : '';
+  let p = await db.get('photos', id);
+  if (!p && loggedIn()) p = await downloadPhoto(id);
+  if (!p) return '';
+  const u = URL.createObjectURL(p.blob);
   PHOTO_URLS.set(id, u);
   return u;
 }
@@ -1170,7 +1319,7 @@ async function saveDraft() {
   }
   const now = Date.now();
   const rec = { ...d, id: d.id || uid(), createdAt: d.createdAt || now, updatedAt: now, addedBy: d.addedBy || me() };
-  await db.put('recipes', rec);
+  await saveRecipe(rec);
   await loadRecipes();
   DRAFT = null;
   ADD_REFS = [];
@@ -1286,8 +1435,7 @@ function viewSettings() {
     <p class="hint" style="margin:0 0 8px">買い物リストを入れるKeepのリストのURLです。Web版Keep（keep.google.com）でそのリストを開いたときのアドレスを貼り付けます。</p>
     <div class="row"><input id="keep-input" type="url" value="${esc(keepUrl())}" placeholder="https://keep.google.com/#LIST/..."><button data-act="save-keep">保存</button></div>
     <p class="err" id="keep-err"></p></div>
-  <div class="card"><h2>家族と共有</h2>
-    <p class="hint" style="margin:0">家族のスマホとレシピを同期する機能は、次の段階で設定できるようになります。今はこのスマホの中だけに保存されています。</p></div>
+  ${syncCard()}
   <div class="card"><h2>バックアップ</h2>
     <p class="hint" style="margin:0 0 10px">レシピ ${RECIPES.length}件。写真ごと1つのファイルに書き出せます。機種変更のときにも使えます。</p>
     <div class="row"><button data-act="export">書き出す</button><button data-act="import">読み込む</button></div></div>
@@ -1318,7 +1466,7 @@ async function importAll(file) {
   let n = 0;
   for (const r of data.recipes || []) {
     const cur = await db.get('recipes', r.id);
-    if (!cur || (cur.updatedAt || 0) < (r.updatedAt || 0)) { await db.put('recipes', r); n++; }
+    if (!cur || (cur.updatedAt || 0) < (r.updatedAt || 0)) { const { syncedAt, ...clean } = r; await saveRecipe(clean); n++; }
   }
   await loadRecipes();
   toast(`${n}件を読み込みました`);
@@ -1341,7 +1489,7 @@ async function addSample() {
     ].map(text => ({ text })),
     memo: '皮目をしっかり焼くとパリッと仕上がります。',
   });
-  await db.put('recipes', r);
+  await saveRecipe(r);
   await loadRecipes();
   location.hash = '#/r/' + r.id;
 }
@@ -1390,6 +1538,32 @@ const ACTIONS = {
   'set-me'(el) { ls.set('me', el.dataset.name); toast(`${el.dataset.name}にしました`); rerender(); },
   'set-by'(el) { DRAFT.addedBy = el.dataset.name; $$('[data-act="set-by"]').forEach(b => b.classList.toggle('on', b === el)); },
   'save-title'() { ls.set('appTitle', $('#title-input').value.trim()); toast('保存しました'); },
+  async 'sb-login'(el) {
+    const email = $('#sb-email').value.trim(), pass = $('#sb-pass').value;
+    const err = $('#sb-err');
+    if (!email || !pass) { err.textContent = 'メールアドレスとパスワードを入れてください。'; return; }
+    el.disabled = true;
+    el.textContent = 'ログインしています…';
+    try {
+      await sbAuth({ email, password: pass }, 'password');
+    } catch (e) {
+      el.disabled = false;
+      el.textContent = 'ログインして同期する';
+      err.textContent = e.status === 400 ? 'メールアドレスかパスワードが違います。' : 'つながりませんでした。電波を確認してください。';
+      return;
+    }
+    ls.set('lastPull', '0');
+    rerender();
+    await syncNow();
+    toast(SYNC_STATE.err || `同期しました（レシピ${RECIPES.length}件）`, 3500);
+  },
+  async 'sync-now'() { await syncNow(); toast(SYNC_STATE.err || '同期しました'); },
+  'sb-logout'() {
+    if (!confirm('ログアウトしますか？このスマホのレシピは消えませんが、家族との同期は止まります。')) return;
+    ls.set('sbSession', '');
+    ls.set('lastPull', '0');
+    rerender();
+  },
   'save-keep'() {
     const v = $('#keep-input').value.trim();
     if (v && !/^https:\/\/keep\.google\.com\//.test(v)) { $('#keep-err').textContent = 'https://keep.google.com/ から始まるURLを貼り付けてください。'; return; }
@@ -1404,7 +1578,7 @@ const ACTIONS = {
     const r = findRecipe(el.dataset.id);
     r.fav = !r.fav;
     r.updatedAt = Date.now();
-    await db.put('recipes', r);
+    await saveRecipe(r);
     el.innerHTML = r.fav ? ICON.heartOn : ICON.heart;
     toast(r.fav ? 'お気に入りに追加しました' : 'お気に入りから外しました');
   },
@@ -1434,7 +1608,7 @@ const ACTIONS = {
     if (photos.length && $('#cooked-cover').checked) r.photos = [photos[0], ...(r.photos || [])];
     COOKED_PHOTOS = [];
     r.updatedAt = Date.now();
-    await db.put('recipes', r);
+    await saveRecipe(r);
     toast('記録しました');
     rerender();
   },
@@ -1443,7 +1617,7 @@ const ACTIONS = {
     if (!confirm(`「${r.title}」を削除しますか？`)) return;
     r.deleted = true;
     r.updatedAt = Date.now();
-    await db.put('recipes', r);
+    await saveRecipe(r);
     await loadRecipes();
     toast('削除しました');
     location.hash = '#/';
@@ -1567,8 +1741,12 @@ window.addEventListener('hashchange', route);
   try { await navigator.storage?.persist?.(); } catch {}
   await loadRecipes();
   route();
+  await syncNow();
   gcPhotos().catch(() => {});
 })();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') scheduleSync(200); });
+window.addEventListener('online', () => scheduleSync(200));
+setInterval(() => { if (document.visibilityState === 'visible') syncNow(); }, 60e3);
 </script>
 </body>
 </html>
