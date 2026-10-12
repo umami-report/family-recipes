@@ -33,6 +33,40 @@ async function isLoggedIn(req: Request) {
   return true;
 }
 
+// YouTubeの動画情報（タイトル・概要欄）を取る。
+// ページそのものはサーバーから開くと概要欄が入っていないことがあるため、
+// YouTubeの内部API → （YT_API_KEY があれば）公式のData API の順に試す。
+async function youtubeInfo(id: string) {
+  const thumbnail = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+  let title = '';
+  let status = '';
+  try {
+    const r = await fetch('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': UA },
+      body: JSON.stringify({
+        context: { client: { clientName: 'WEB', clientVersion: '2.20250925.01.00', hl: 'ja', gl: 'JP' } },
+        videoId: id,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const j = r.ok ? await r.json() : null;
+    status = j?.playabilityStatus?.status ?? `http ${r.status}`;
+    const v = j?.videoDetails;
+    title = v?.title ?? '';
+    if (v?.shortDescription) return { title, description: v.shortDescription, thumbnail, via: 'player' };
+  } catch (e) {
+    status = String(e);
+  }
+  const key = Deno.env.get('YT_API_KEY');
+  if (key) {
+    const r = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${id}&key=${key}`);
+    const s = r.ok ? (await r.json()).items?.[0]?.snippet : null;
+    if (s) return { title: s.title, description: s.description ?? '', thumbnail, via: 'api' };
+  }
+  return { title, description: '', thumbnail, via: 'none', status };
+}
+
 // 社内ネットワークやIP直打ちには行かせない
 function blockedHost(host: string) {
   return (
@@ -49,6 +83,12 @@ Deno.serve(async (req) => {
   const headers = cors(req);
   if (req.method === 'OPTIONS') return new Response('ok', { headers });
   if (!(await isLoggedIn(req))) return new Response('login required', { status: 401, headers });
+
+  const yt = new URL(req.url).searchParams.get('youtube');
+  if (yt) {
+    if (!/^[\w-]{11}$/.test(yt)) return new Response('bad id', { status: 400, headers });
+    return Response.json(await youtubeInfo(yt), { headers });
+  }
 
   let target: URL;
   try {

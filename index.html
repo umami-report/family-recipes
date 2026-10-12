@@ -178,7 +178,7 @@ body.cooking #timers{bottom:calc(env(safe-area-inset-bottom) + 86px)}
 
 <script>
 'use strict';
-const VERSION = '0.4.2';
+const VERSION = '0.4.3';
 
 /* ---------- 小物 ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -848,14 +848,29 @@ function extractFromHtml(html, url) {
   const viaPage = !text && site !== 'YouTube' && site !== 'Instagram';
   if (viaPage) text = pageText(doc);
   if (!text && site !== 'YouTube') text = meta('og:description');
-  if (text) {
-    const r = parseRecipeText(text, { dropIntro: site === 'YouTube' || viaPage });
-    d.ingredients = r.ingredients;
-    d.steps = r.steps;
-    if (r.servings) { d.servings = r.servings; d.servingsUnit = r.servingsUnit; }
-    d.memo = d.ingredients.length || d.steps.length ? r.memo : (viaPage ? meta('og:description') : text);
-    d._links = r.links;
-  }
+  if (text) applyDescription(d, text, site === 'YouTube' || viaPage, viaPage ? meta('og:description') : text);
+  return d;
+}
+function applyDescription(d, text, dropIntro, fallbackMemo) {
+  const r = parseRecipeText(text, { dropIntro });
+  d.ingredients = r.ingredients;
+  d.steps = r.steps;
+  if (r.servings) { d.servings = r.servings; d.servingsUnit = r.servingsUnit; }
+  d.memo = d.ingredients.length || d.steps.length ? r.memo : fallbackMemo;
+  d._links = r.links;
+}
+
+// YouTubeはSupabaseからページを開くと概要欄が入っていないことがあるため、
+// 中継役に動画の情報（タイトル・概要欄・サムネイル）だけを取ってきてもらう
+const ytId = url => url.match(/(?:youtu\.be\/|[?&]v=|\/(?:shorts|live|embed)\/)([\w-]{11})/)?.[1];
+async function importYouTube(url) {
+  const id = ytId(url);
+  if (!id || !loggedIn() || proxyBase()) return null;
+  const j = await (await sb('/functions/v1/fetch-page?youtube=' + id)).json();
+  const d = newDraft({ source: { type: 'url', url, site: 'YouTube' } });
+  d.title = (j.title || '').replace(/\s*#\S+/g, '').trim();
+  if (j.thumbnail) d.photos = [{ url: j.thumbnail }];
+  if (j.description) applyDescription(d, j.description, true, '');
   return d;
 }
 
@@ -1206,7 +1221,14 @@ async function importUrl() {
   btn.disabled = true;
   btn.textContent = '読み取り中…';
   try {
-    DRAFT = extractFromHtml(await fetchHtml(url), url);
+    let d = siteName(url) === 'YouTube' ? await importYouTube(url).catch(() => null) : null;
+    if (!d || !(d.ingredients.length || d.steps.length || d._links?.step || d._links?.ing)) {
+      try {
+        const h = extractFromHtml(await fetchHtml(url), url);
+        if (!d || h.ingredients.length || h.steps.length) d = h;
+      } catch (e) { if (!d) throw e; }
+    }
+    DRAFT = d;
     await followLinks(DRAFT);
   } catch (e) {
     btn.disabled = false;
