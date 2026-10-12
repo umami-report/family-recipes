@@ -178,7 +178,7 @@ body.cooking #timers{bottom:calc(env(safe-area-inset-bottom) + 86px)}
 
 <script>
 'use strict';
-const VERSION = '0.3.0';
+const VERSION = '0.3.1';
 
 /* ---------- 小物 ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -347,13 +347,26 @@ const PRE_UNITS = ['大さじ', '小さじ'];
 const METRIC = ['g', 'kg', 'ml', 'mL', 'cc', 'L', 'l', 'cm'];
 const COUNT_UNITS = ['個', '枚', '本', '尾', '丁', '玉', '株', '匹', 'つ', 'パック', '缶', '袋', '束', '房', '切れ', '切', '粒', 'ケ', 'コ', '箱', '片', 'かけ'];
 const POST_UNITS = [...new Set([...METRIC, 'カップ', 'さじ', '合', '杯', '膳', '滴', 'つまみ', '振り', ...COUNT_UNITS])].sort((a, b) => b.length - a.length);
-const FREE = ['各少々', '各適量', 'ひとつまみ', 'ひとかけ', 'お好みで', 'お好み', '好みで', 'たっぷり', '少々', '適量', '適宜', '少量', '少し'];
+const FREE = ['各少々', '各適量', 'ひとつまみ', 'ひとかけ', '好きなだけ', 'お好みで', 'お好み', '好みで', 'たっぷり', '少々', '適量', '適宜', '少量', '少し'];
 const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const RE_NUM = '(?:\\d+(?:\\.\\d+)?\\s*と\\s*\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:\\.\\d+)?\\s*[½⅓⅔¼¾]?|[½⅓⅔¼¾])';
 const RE_SEP = '[\\s:：…・.]*';
 const rePre = new RegExp(`^(.+?)${RE_SEP}(大さじ|小さじ|カップ)\\s*(${RE_NUM})(?:\\s*〜\\s*(${RE_NUM}))?(.*)$`);
 const rePost = new RegExp(`^(.+?)${RE_SEP}(${RE_NUM})(?:\\s*〜\\s*(${RE_NUM}))?\\s*(${POST_UNITS.map(reEsc).join('|')})?(.*)$`);
 const reFree = new RegExp(`^(.+?)${RE_SEP}(${FREE.join('|')})(.*)$`);
+// 量だけの行（スクショの文字認識で材料名と量が別の行に分かれたとき用）
+const QTY_TAIL = String.raw`\s*((?:弱|強|程度|くらい|ぐらい|前後)?\s*(?:\(.*\))?)$`;
+const reQtyPre = new RegExp(String.raw`^(大さじ|小さじ|カップ)\s*(${RE_NUM})(?:\s*〜\s*(${RE_NUM}))?${QTY_TAIL}`);
+const reQtyPost = new RegExp(String.raw`^(${RE_NUM})(?:\s*〜\s*(${RE_NUM}))?\s*(${POST_UNITS.map(reEsc).join('|')})?${QTY_TAIL}`);
+const reQtyFree = new RegExp(`^(${FREE.join('|')})${QTY_TAIL}`);
+function parseQtyOnly(line) {
+  const s = normalize(line).trim().replace(/^[・\-*•]+\s*/, '');
+  let m;
+  if ((m = s.match(reQtyPre))) return { unit: m[1], amount: parseNum(m[2]), amount2: parseNum(m[3]), note: m[4].trim() };
+  if ((m = s.match(reQtyPost))) return { unit: m[3] || '', amount: parseNum(m[1]), amount2: parseNum(m[2]), note: m[4].trim() };
+  if ((m = s.match(reQtyFree))) return { unit: m[1], amount: null, amount2: null, note: m[2].trim() };
+  return null;
+}
 
 function parseNum(s) {
   if (s == null) return null;
@@ -383,7 +396,7 @@ function parseIngredient(line) {
   const out = { name: s, amount: null, amount2: null, unit: '', note: '', group };
   if ((m = s.match(rePre))) {
     Object.assign(out, { name: m[1], unit: m[2], amount: parseNum(m[3]), amount2: parseNum(m[4]), note: m[5] });
-  } else if ((m = s.match(rePost)) && !/^\d+$/.test(m[1].trim())) {
+  } else if ((m = s.match(rePost)) && /\p{L}/u.test(m[1])) {
     Object.assign(out, { name: m[1], amount: parseNum(m[2]), amount2: parseNum(m[3]), unit: m[4] || '', note: m[5] });
   } else if ((m = s.match(reFree))) {
     Object.assign(out, { name: m[1], unit: m[2], note: m[3] });
@@ -494,6 +507,13 @@ function parseRecipeText(raw, { dropIntro = false } = {}) {
     if (mode !== 'step' && /^[^\p{L}\p{N}]*\(?\d+\s*(人|名)[^)]{0,3}\)?$/u.test(l)) { takeServ(l); continue; }
     if (mode === 'tail') continue;
     if (mode === 'ing') {
+      const q = parseQtyOnly(l);
+      if (q) {
+        // まだ量が付いていない材料に、上から順に量を付ける
+        const target = ings.find(i => !i.header && i.amount == null && !i.unit);
+        if (target) Object.assign(target, q, { note: [target.note, q.note].filter(Boolean).join(' ') });
+        continue;
+      }
       const p = parseIngredient(l);
       if (p.header || hasAmt(p)) ings.push(p);
       else if (p.name.length <= 10 && GROUP_WORD.test(p.name)) ings.push({ header: true, name: p.name });
