@@ -178,7 +178,7 @@ body.cooking #timers{bottom:calc(env(safe-area-inset-bottom) + 86px)}
 
 <script>
 'use strict';
-const VERSION = '0.4.1';
+const VERSION = '0.4.2';
 
 /* ---------- 小物 ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -489,7 +489,8 @@ function normalize(s) {
   return String(s ?? '')
     .replace(/[０-９Ａ-Ｚａ-ｚ．／％（）]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
     .replace(/[　 ]/g, ' ')
-    .replace(/[～~]/g, '〜');
+    .replace(/[～~]/g, '〜')
+    .replace(/㏄/g, 'cc').replace(/㎖/g, 'ml').replace(/㎏/g, 'kg').replace(/㎎/g, 'mg');
 }
 const FRAC = { '½': 1 / 2, '⅓': 1 / 3, '⅔': 2 / 3, '¼': 1 / 4, '¾': 3 / 4 };
 const PRE_UNITS = ['大さじ', '小さじ'];
@@ -625,7 +626,7 @@ function parseRecipeText(raw, { dropIntro = false } = {}) {
   const lines = normalize(raw).split(/\r?\n/).map(l => l.trim());
   const lead = l => l.replace(/^[^\p{L}\p{N}]+/u, '');
   const H_ING = /^(材料|ingredients?|用意するもの|使う材料|食材)/i;
-  const H_STEP = /^(作り方|つくり方|作りかた|手順|調理手順|レシピ手順|how\s*to|steps?|recipe)/i;
+  const H_STEP = /^(作り方|つくり方|作りかた|手順|調理手順|レシピ手順|how\s*to|steps?|recipe|process|directions|method|instructions)/i;
   const H_MEMO = /^(ポイント|コツ|メモ|point|tips?|保存|注意|アレンジ|ワンポイント)/i;
   let servings = null, servingsUnit = '人分', mode = null;
   const ings = [], stepLines = [], memo = [], pre = [];
@@ -636,6 +637,7 @@ function parseRecipeText(raw, { dropIntro = false } = {}) {
   const hasAmt = i => i.amount != null || FREE.includes(i.unit);
   const GROUP_WORD = /[A-Z]$|たれ|タレ|ソース|調味料|合わせ|トッピング|生地|衣|下味|仕上げ/;
   let blanks = 0;
+  const links = {};
   for (const l of lines) {
     if (!l) {
       // 材料の後に空行が続いたら、そこから先は宣伝やSNSの案内とみなす
@@ -643,7 +645,13 @@ function parseRecipeText(raw, { dropIntro = false } = {}) {
       continue;
     }
     blanks = 0;
+    const link = l.match(/https?:\/\/\S+/)?.[0];
+    // 「作り方はこちら」の直後のリンクは、あとで開いて手順を取りに行く
+    if (link && mode === 'step' && !stepLines.length && !links.step) links.step = link;
+    if (link && mode === 'ing' && !ings.length && !links.ing) links.ing = link;
     if (/https?:\/\/|www\.|\S+@\S+\.\w+/.test(l) || /^(#\S+\s*)+$/.test(l)) continue;
+    // 「-----」のような区切り線で、材料や手順のまとまりは終わり
+    if (/^[-=_─━ー－＝*＊~〜・.]{5,}$/.test(l)) { if (mode) mode = 'tail'; continue; }
     const L = lead(l);
     const ingAt = L.search(/材料|ingredients/i);
     const isIngHead = (L.length <= 24 && H_ING.test(L))
@@ -694,18 +702,21 @@ function parseRecipeText(raw, { dropIntro = false } = {}) {
   }
   if (!servings) takeServ(normalize(raw));
   return {
-    title, servings, servingsUnit,
+    title, servings, servingsUnit, links,
     ingredients: ings.filter(i => i.name),
     steps: buildSteps(stepLines),
     memo: memo.join('\n'),
   };
 }
 function buildSteps(lines) {
-  const numbered = lines.some(l => STEPNUM.test(l));
+  // 「1」だけの行の次に本文が来る書き方もある
+  const BARE = /^(?:\d{1,2}|[①-⑳])$/;
+  const numbered = lines.some(l => STEPNUM.test(l) || BARE.test(l));
   const out = [];
   for (const l of lines) {
     const m = l.match(STEPNUM);
-    if (m) out.push(l.slice(m[0].length).trim());
+    if (BARE.test(l)) out.push('');
+    else if (m) out.push(l.slice(m[0].length).trim());
     else if (numbered && out.length) out[out.length - 1] += l;
     else out.push(l.replace(/^[・\-*•●○◎★☆◆◇■□]+\s*/, ''));
   }
@@ -789,6 +800,16 @@ function parseYield(y) {
   return null;
 }
 
+// レシピ用のデータがないページは、本文の文字を行ごとに取り出して読む
+function pageText(doc) {
+  const el = doc.querySelector('[itemprop="articleBody"], .entry-content, .post-content, .article__content, .rte, article, main') || doc.body;
+  if (!el) return '';
+  const c = el.cloneNode(true);
+  c.querySelectorAll('script, style, noscript, nav, header, footer, aside, form, button, svg, iframe').forEach(e => e.remove());
+  c.querySelectorAll('br').forEach(b => b.replaceWith('\n'));
+  c.querySelectorAll('p, div, li, h1, h2, h3, h4, h5, h6, dt, dd, tr, section, figure, ul, ol, table').forEach(b => b.append('\n'));
+  return c.textContent.replace(/[ \t\u00A0　]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
 function extractFromHtml(html, url) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const meta = n => doc.querySelector(`meta[property="${n}"],meta[name="${n}"]`)?.content?.trim() || '';
@@ -824,13 +845,16 @@ function extractFromHtml(html, url) {
     text = m ? m[1] : '';
   }
   if (site === 'YouTube' || site === 'Instagram') d.title = d.title.replace(/\s*#\S+/g, '').trim();
+  const viaPage = !text && site !== 'YouTube' && site !== 'Instagram';
+  if (viaPage) text = pageText(doc);
   if (!text && site !== 'YouTube') text = meta('og:description');
   if (text) {
-    const r = parseRecipeText(text, { dropIntro: site === 'YouTube' });
+    const r = parseRecipeText(text, { dropIntro: site === 'YouTube' || viaPage });
     d.ingredients = r.ingredients;
     d.steps = r.steps;
     if (r.servings) { d.servings = r.servings; d.servingsUnit = r.servingsUnit; }
-    d.memo = d.ingredients.length || d.steps.length ? r.memo : text;
+    d.memo = d.ingredients.length || d.steps.length ? r.memo : (viaPage ? meta('og:description') : text);
+    d._links = r.links;
   }
   return d;
 }
@@ -1183,6 +1207,7 @@ async function importUrl() {
   btn.textContent = '読み取り中…';
   try {
     DRAFT = extractFromHtml(await fetchHtml(url), url);
+    await followLinks(DRAFT);
   } catch (e) {
     btn.disabled = false;
     btn.textContent = '読み取る';
@@ -1193,6 +1218,25 @@ async function importUrl() {
   }
   if (!DRAFT.ingredients.length && !DRAFT.steps.length) toast('材料と作り方は見つかりませんでした。文字を貼り付けて追加できます。', 4000);
   location.hash = '#/edit/new';
+}
+// 概要欄に「作り方はこちら」とリンクだけ書いてある場合、その先のページから補う
+async function followLinks(d) {
+  const links = d._links || {};
+  delete d._links;
+  for (const [kind, url] of Object.entries(links)) {
+    if (kind === 'step' && d.steps.length) continue;
+    if (kind === 'ing' && d.ingredients.length) continue;
+    try {
+      const sub = extractFromHtml(await fetchHtml(url), url);
+      if (kind === 'step' && sub.steps.length) d.steps = sub.steps;
+      if (kind === 'ing' && sub.ingredients.length) {
+        d.ingredients = sub.ingredients;
+        if (sub.servings) { d.servings = sub.servings; d.servingsUnit = sub.servingsUnit; }
+      }
+      if (!d.photos.length && sub.photos.length) d.photos = sub.photos;
+      if (sub.steps.length || sub.ingredients.length) d.memo = [d.memo, `${kind === 'step' ? '作り方' : '材料'}の出典：${url}`].filter(Boolean).join('\n');
+    } catch {}
+  }
 }
 function applyParsed(d, text) {
   const r = parseRecipeText(text);
