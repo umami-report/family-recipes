@@ -178,7 +178,7 @@ body.cooking #timers{bottom:calc(env(safe-area-inset-bottom) + 86px)}
 
 <script>
 'use strict';
-const VERSION = '0.3.1';
+const VERSION = '0.3.2';
 
 /* ---------- 小物 ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -469,7 +469,8 @@ function parseAmountInput(s) {
 
 /* ---------- 文章からレシピを組み立てる ---------- */
 const STEPNUM = /^(?:step\s*)?(?:(\d{1,2})\s*[.)、:：]|[(](\d{1,2})[)]|([①-⑳])|(\d)️?⃣|(\d{1,2})\s+(?=\S))\s*/i;
-const SERV_RE = /(\d+)\s*(人分|人前|名分|個分|枚分|本分|皿分|人)/;
+const STEP_START = /^(?:step\s*\d|\d{1,2}\s*[.)、:：]\s*(?!\d)\S|[(]\d{1,2}[)]|[①-⑳]|\d️?⃣)/i;
+const SERV_RE =/(\d+)\s*(人分|人前|名分|個分|枚分|本分|皿分|人)/;
 
 function parseRecipeText(raw, { dropIntro = false } = {}) {
   const lines = normalize(raw).split(/\r?\n/).map(l => l.trim());
@@ -505,8 +506,12 @@ function parseRecipeText(raw, { dropIntro = false } = {}) {
     if (L.length <= 24 && H_STEP.test(L)) { mode = 'step'; continue; }
     if (L.length <= 24 && H_MEMO.test(L)) { mode = 'memo'; if (L.length > 6) memo.push(l); continue; }
     if (mode !== 'step' && /^[^\p{L}\p{N}]*\(?\d+\s*(人|名)[^)]{0,3}\)?$/u.test(l)) { takeServ(l); continue; }
+    // 「作り方」の見出しがなくても、①や「1.」で始まる行が来たら手順に切り替える
+    if ((mode === 'ing' || mode === 'tail') && STEP_START.test(l)) mode = 'step';
     if (mode === 'tail') continue;
     if (mode === 'ing') {
+      const s = parseIngredient(l);
+      if (!s.header && s.amount != null && s.note.length > 12 && !/^[(（]/.test(s.note)) { stepLines.push(l); continue; }
       const q = parseQtyOnly(l);
       if (q) {
         // まだ量が付いていない材料に、上から順に量を付ける
@@ -1239,14 +1244,15 @@ function viewShop() {
       <p class="hint">切らしているものだけチェックしてください。</p><ul class="shop">${home.map(shopRow).join('')}</ul></details>` : ''}
   </section>
   <div class="savebar">
-    <button class="primary big" data-act="shop-copy">${ICON.copy}コピーしてGoogle Keepを開く</button>
-    ${navigator.share ? `<button class="big" data-act="shop-share" style="margin-top:8px">${ICON.share}共有メニューからKeepに送る</button>` : ''}
+    ${navigator.share ? `<button class="primary big" data-act="shop-share">${ICON.share}Google Keepに送る</button>` : ''}
+    <button class="big ${navigator.share ? '' : 'primary'}" data-act="shop-copy" style="margin-top:8px">${ICON.copy}コピーしてGoogle Keepを開く</button>
   </div>
-  <details class="card"><summary>Google Keepでチェックリストにする方法</summary>
-    <ol><li>「コピーしてGoogle Keepを開く」を押す</li>
-    <li>Keepで右下の「＋」→「リスト」（チェックボックスのメモ）を選ぶ</li>
-    <li>1つ目の項目を長押しして「ペースト」。1行ずつ別の項目になります</li></ol>
-    <p class="hint">「共有メニュー」から送ると普通のメモとして入ります。その場合はメモの「︙」→「チェックボックスを表示」でリストに変わります。</p></details>`;
+  <div class="card"><h2 style="font-size:15px">Keepでチェックリストにするには</h2>
+    <ol style="padding-left:20px;margin:6px 0;font-size:14px;color:var(--sub)">
+    <li>「Google Keepに送る」→ 共有メニューで「Keep」を選んで保存（コピーした場合は、Keepの<b>普通のメモ</b>に貼り付け）</li>
+    <li>Keepでそのメモを開き、左下の「＋」（または右上の「︙」）→「<b>チェックボックスを表示</b>」</li>
+    <li>1行ずつチェック項目に分かれます</li></ol>
+    <p class="hint">Keepの「リスト」に直接貼り付けると、1つの項目にまとまってしまいます。</p></div>`;
 }
 async function copyText(t) {
   try { await navigator.clipboard.writeText(t); return true; } catch {}
