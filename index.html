@@ -178,7 +178,7 @@ body.cooking #timers{bottom:calc(env(safe-area-inset-bottom) + 86px)}
 
 <script>
 'use strict';
-const VERSION = '0.4.0';
+const VERSION = '0.4.1';
 
 /* ---------- 小物 ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -734,6 +734,8 @@ function proxyBase() {
 }
 async function proxyFetch(url) {
   const b = proxyBase();
+  // ログインしていれば Supabase の中継（fetch-page）を使う
+  if (!b && loggedIn()) return sb('/functions/v1/fetch-page?url=' + encodeURIComponent(url));
   if (!b) throw new Error('NOPROXY');
   const r = await fetch(b + '?url=' + encodeURIComponent(url));
   if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1185,7 +1187,7 @@ async function importUrl() {
     btn.disabled = false;
     btn.textContent = '読み取る';
     err.textContent = e.message === 'NOPROXY'
-      ? 'リンクの読み取りはまだ設定されていません。下の「文字を貼り付け」を使ってください。'
+      ? 'リンクの読み取りは、設定の「家族と共有」でログインすると使えます。今は下の「文字を貼り付け」を使ってください。'
       : 'このページは読み取れませんでした。下の「文字を貼り付け」を使ってください。';
     return;
   }
